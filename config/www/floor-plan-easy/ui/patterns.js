@@ -1,0 +1,17 @@
+export const BACKGROUND_PATTERNS = {
+    "diagonals": `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <line x1="0" y1="0" x2="100" y2="100" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            <line x1="100" y1="0" x2="0" y2="100" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+        `.trim()
+}
+
+export const WALL_PATTERNS = {
+    "corner1": `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+            <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            <line x1="0" y1="0" x2="0" y2="100" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+        `.trim()
+}

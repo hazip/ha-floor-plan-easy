@@ -1,0 +1,33 @@
+# -------------------------------------------------
+# Default: ignore everything
+# -------------------------------------------------
+*
+
+# -------------------------------------------------
+# Allow root-level selected files
+# -------------------------------------------------
+!README.md
+!docker-compose.yaml
+!.gitignore
+
+# -------------------------------------------------
+# Allow config directory structure
+# -------------------------------------------------
+!config/
+config/*
+
+# Allow specific subdirectories
+!config/custom_components/
+config/custom_components/*
+!config/custom_components/floor_plan_easy/**
+!config/custom_components/floor_plan_easy/
+
+!config/www/
+config/www/*
+!config/www/floor-plan-easy/**
+!config/www/floor-plan-easy/
+
+# Python compiled files
+**/__pycache__/
+**/*.py[cod]
+**/*.so
