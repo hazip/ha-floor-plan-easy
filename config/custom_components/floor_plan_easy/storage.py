@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -12,22 +13,25 @@ class FloorPlanStorage:
     """Simple storage: { "floors": { "<floor_id>": <floor_json> } }"""
 
     def __init__(self, hass: HomeAssistant) -> None:
-        self._hass = hass
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, STORAGE_KEY)
         self._data: dict[str, Any] = {"floors": {}}
         self._loaded = False
+        self._load_lock = asyncio.Lock()
 
     async def async_load(self) -> None:
         if self._loaded:
             return
-        loaded = await self._store.async_load()
-        if isinstance(loaded, dict):
-            self._data = loaded
-            self._data.setdefault("floors", {})
-        self._loaded = True
+        async with self._load_lock:
+            if self._loaded:
+                return
+            loaded = await self._store.async_load()
+            if isinstance(loaded, dict):
+                self._data = loaded
+                self._data.setdefault("floors", {})
+            self._loaded = True
 
     def _schedule_save(self) -> None:
-        # Debounce-friendly: HA maga időzíti
+        # Debounced write: Home Assistant coalesces saves within the delay window.
         self._store.async_delay_save(lambda: self._data, delay=1.0)
 
     async def async_get_floor(self, floor_id: str) -> dict[str, Any] | None:
@@ -45,15 +49,15 @@ class FloorPlanStorage:
         await self.async_load()
         floors: dict[str, Any] = self._data["floors"]
         return sorted(floors.keys())
-    
-    async def async_list_floors_with_names(self) -> list[dict]:
+
+    async def async_list_floors_with_names(self) -> list[dict[str, Any]]:
         await self.async_load()
-        floors: dict = self._data.get("floors", {})
-        out: list[dict] = []
+        floors: dict[str, Any] = self._data["floors"]
+        out: list[dict[str, Any]] = []
         for floor_id, data in floors.items():
             name = floor_id
-            if isinstance(data, dict):
-                name = data.get("name") or floor_id
+            if isinstance(data, dict) and data.get("name"):
+                name = str(data["name"])
             out.append({"id": floor_id, "name": name})
         out.sort(key=lambda x: x["name"].lower())
         return out

@@ -159,3 +159,12 @@ Tiles bound to an entity support a tap action:
   enabled avoids this.
 - **No "Open editor" button:** Browser Mod is not installed. Either install it,
   or use the manual editor card (Option B).
+
+---
+
+## Developer documentation
+
+Documentation for contributors lives in the [`docs/`](docs/) directory:
+
+- [Backend architecture](docs/backend.md) — structure and behaviour of the
+  Home Assistant integration (storage layer and WebSocket API).

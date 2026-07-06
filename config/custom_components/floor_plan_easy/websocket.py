@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 
 from .const import DOMAIN, DATA_STORAGE
 
@@ -15,7 +17,11 @@ from .const import DOMAIN, DATA_STORAGE
     }
 )
 @websocket_api.async_response
-async def ws_get_floor(hass: HomeAssistant, connection, msg) -> None:
+async def ws_get_floor(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
     storage = hass.data[DOMAIN][DATA_STORAGE]
     floor_id: str = msg["floor_id"]
     data = await storage.async_get_floor(floor_id)
@@ -30,26 +36,23 @@ async def ws_get_floor(hass: HomeAssistant, connection, msg) -> None:
     }
 )
 @websocket_api.async_response
-async def ws_save_floor(hass: HomeAssistant, connection, msg) -> None:
+async def ws_save_floor(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
     storage = hass.data[DOMAIN][DATA_STORAGE]
     await storage.async_save_floor(msg["floor_id"], msg["data"])
     connection.send_result(msg["id"], {"ok": True})
 
 
-# @websocket_api.websocket_command(
-#     {
-#         vol.Required("type"): f"{DOMAIN}/list_floors",
-#     }
-# )
-# @websocket_api.async_response
-# async def ws_list_floors(hass: HomeAssistant, connection, msg) -> None:
-#     storage = hass.data[DOMAIN][DATA_STORAGE]
-#     floors = await storage.async_list_floors()
-#     connection.send_result(msg["id"], {"floors": floors})
-
 @websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/list_floors"})
 @websocket_api.async_response
-async def ws_list_floors(hass, connection, msg):
+async def ws_list_floors(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
     storage = hass.data[DOMAIN][DATA_STORAGE]
     floors = await storage.async_list_floors_with_names()
     connection.send_result(msg["id"], {"floors": floors})
@@ -62,13 +65,18 @@ async def ws_list_floors(hass, connection, msg):
     }
 )
 @websocket_api.async_response
-async def ws_delete_floor(hass: HomeAssistant, connection, msg) -> None:
+async def ws_delete_floor(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> None:
     storage = hass.data[DOMAIN][DATA_STORAGE]
-    ok = await storage.async_delete_floor(msg["floor_id"])
-    connection.send_result(msg["id"], {"ok": ok})
+    existed = await storage.async_delete_floor(msg["floor_id"])
+    connection.send_result(msg["id"], {"ok": True, "deleted": existed})
 
 
-def async_register_ws(hass: HomeAssistant) -> None:
+@callback
+def register_ws(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_get_floor)
     websocket_api.async_register_command(hass, ws_save_floor)
     websocket_api.async_register_command(hass, ws_list_floors)
