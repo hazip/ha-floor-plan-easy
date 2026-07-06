@@ -52,7 +52,7 @@ export class TileEntityDialog {
     actionSelect.label = "Tap action";
     actionSelect.value = buffer.tapAction;
     actionSelect.fixedMenuPosition = true;
-    actionSelect.setAttribute("fixedMenuPosition", "");
+    // actionSelect.setAttribute("fixedMenuPosition", "");
     actionSelect.innerHTML = `
       <ha-list-item value="none">Do nothing</ha-list-item>
       <ha-list-item value="toggle">Toggle</ha-list-item>

@@ -2,19 +2,19 @@
 function toFloorId(name) {
   const raw = (name || "").toLowerCase().trim();
 
-  // ékezetek lecsupaszítása, ha támogatott
+  // Strip accents when supported.
   const deaccented = typeof raw.normalize === "function"
     ? raw.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     : raw;
 
   return deaccented
-    // whitespace blokkok -> kötőjel
+    // whitespace runs -> hyphen
     .replace(/\s+/g, "-")
-    // minden más nem alfanumerikus -> kötőjel
+    // any other non-alphanumeric -> hyphen
     .replace(/[^a-z0-9-]+/g, "-")
-    // több kötőjel -> egy
+    // collapse repeated hyphens
     .replace(/-+/g, "-")
-    // eleje/vége kötőjel le
+    // trim leading/trailing hyphens
     .replace(/^-|-$/g, "");
 }
 
@@ -68,30 +68,38 @@ export class SaveFloorDialog {
     save.addEventListener("click", async () => {
       const id = (idField.value || "").trim();
       const name = (nameField.value || "").trim();
+      if (!id) return;
 
-      // floor objektum frissítése
+      // Update the floor model before serializing.
       floor.id = id;
       floor.name = name;
 
-      // JSON elkészítése (a te toJSON-od alapján)
       const floorJson = floor.toJSON();
 
-      const resp = await hass.callWS({
-        type: "floor_plan_easy/save_floor",
-        floor_id: floorJson.id,
-        data: floorJson, // floor.toJSON()
-      });
+      save.disabled = true;
+      try {
+        const resp = await hass.callWS({
+          type: "floor_plan_easy/save_floor",
+          floor_id: floorJson.id,
+          data: floorJson,
+        });
 
-      // return resp.ok === true;
+        if (!resp?.ok) {
+          throw new Error("Save was not acknowledged by the backend.");
+        }
 
-      this.root.updateWindowTitle();
-
-      dialog.open = false;
+        this.root.updateWindowTitle();
+        dialog.open = false;
+      } catch (err) {
+        console.error(err);
+        idField.helper = "Failed to save. Please try again.";
+        save.disabled = false;
+      }
     });
 
     dialog.append(host, cancel, save);
 
-    // fontos: csak a dialog saját closed-jára reagálj (ne menük/pickerek miatt)
+    // Only react to the dialog's own "closed" event (not menus/pickers inside it).
     dialog.addEventListener("closed", (e) => {
       if (e.target !== dialog) return;
       dialog.remove();

@@ -1,6 +1,7 @@
 import { BaseApp } from "./base-app.js";
 import { Tile } from "../model/tile.js";
 import { TileBackground } from "../model/tile-background.js";
+import { TileWall } from "../model/tile-wall.js";
 import { BACKGROUND_PATTERNS, WALL_PATTERNS } from "./patterns.js";
 import { Toolbar } from "./component/toolbar.js";
 import { TileEntityDialog } from "./component/tile-entity-dialog.js";
@@ -13,7 +14,29 @@ export class FloorPlanEasyEditor extends BaseApp {
     this._toolbar = new Toolbar(this)
     this._tileEntityDialog = new TileEntityDialog();
 
+    // Start from an empty floor; if a floor_id is configured (e.g. opened from
+    // the viewer card's "Open editor" button) it is loaded once hass is ready.
     this.newFloor();
+  }
+
+  setConfig(config) {
+    super.setConfig(config);
+    this._maybeLoadConfiguredFloor();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._maybeLoadConfiguredFloor();
+    this._queueRender();
+  }
+
+  _maybeLoadConfiguredFloor() {
+    const floorId = this.config?.floor_id;
+    if (!this._hass || !floorId) return;
+    if (floorId === this._loadedFloorId) return;
+
+    this._loadedFloorId = floorId;
+    this.loadFloor(floorId);
   }
 
   _getMode() {
@@ -40,8 +63,6 @@ export class FloorPlanEasyEditor extends BaseApp {
   }
 
   async _gridClickHandler(row, col, tile) {
-    console.log("EDITOR", row, col, tile);
-
     const mode = this._toolbar.editorState.activeMode;
 
     if (mode === "background_set") {
@@ -49,7 +70,7 @@ export class FloorPlanEasyEditor extends BaseApp {
         tile = this._ensureTile(row, col);
       }
       this._applyBackgroundToTile(tile);
-      this._renderer.render(this.floor);
+      this._renderFloor();
       return;
     }
 
@@ -57,7 +78,7 @@ export class FloorPlanEasyEditor extends BaseApp {
       if (tile) {
         tile.background = null;
       }
-      this._renderer.render(this.floor);
+      this._renderFloor();
       return;
     }
 
@@ -66,7 +87,7 @@ export class FloorPlanEasyEditor extends BaseApp {
         tile = this._ensureTile(row, col);
       }
       this._applyWallToTile(tile);
-      this._renderer.render(this.floor);
+      this._renderFloor();
       return;
     }
 
@@ -74,7 +95,7 @@ export class FloorPlanEasyEditor extends BaseApp {
       if (tile) {
         tile.wall = null;
       }
-      this._renderer.render(this.floor);
+      this._renderFloor();
       return;
     }
 
@@ -85,7 +106,7 @@ export class FloorPlanEasyEditor extends BaseApp {
       const dialog = await this._tileEntityDialog.open(tile, this._hass);
       dialog.addEventListener("closed", (e) => {
         if (e.target !== dialog) return;
-        this._renderer.render(this.floor);
+        this._renderFloor();
       });
       return;
     }
@@ -93,7 +114,7 @@ export class FloorPlanEasyEditor extends BaseApp {
     if (mode === "content_clear") {
       if (tile) {
         tile.content = null;
-        this._renderer.render(this.floor);
+        this._renderFloor();
       }
       return;
     }
@@ -104,16 +125,16 @@ export class FloorPlanEasyEditor extends BaseApp {
     tile.background = new TileBackground({
       type: bgType,
       color: this._toolbar.editorState.bg.bgColor,
-      svg: bgType == "pattern" ? BACKGROUND_PATTERNS[this._toolbar.editorState.bg.patternKey] : "",
+      svg: bgType === "pattern" ? BACKGROUND_PATTERNS[this._toolbar.editorState.bg.patternKey] : "",
       strokeColor: this._toolbar.editorState.bg.fgColor
     });
   }
 
   _applyWallToTile(tile) {
-    tile.wall = {
+    tile.wall = new TileWall({
       svg: WALL_PATTERNS[this._toolbar.editorState.wall.patternKey],
       strokeColor: this._toolbar.editorState.wall.fgColor
-    };
+    });
   }
 
   getCardSize() {

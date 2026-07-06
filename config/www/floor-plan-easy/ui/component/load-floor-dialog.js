@@ -18,7 +18,7 @@ export class LoadFloorDialog {
     host.style.gap = "16px";
     host.style.padding = "0 4px";
 
-    // loading state
+    // loading indicator
     const status = document.createElement("div");
     status.style.opacity = "0.75";
     status.textContent = "Loading floors…";
@@ -76,10 +76,8 @@ export class LoadFloorDialog {
         combo.items = floors.map((_floor) => ({ label: _floor.name, value: _floor.id }));
         combo.disabled = false;
 
-        // default kiválasztás
-        // combo.value = floors[0].id;
-
-        loadBtn.disabled = false;
+        // Stays disabled until the user picks a floor.
+        loadBtn.disabled = true;
 
         combo.addEventListener("value-changed", (e) => {
             e.stopPropagation();
@@ -90,7 +88,7 @@ export class LoadFloorDialog {
     } catch (err) {
         console.error(err);
         status.textContent = "Failed to load floors.";
-        select.disabled = true;
+        combo.disabled = true;
         loadBtn.disabled = true;
     }
   }

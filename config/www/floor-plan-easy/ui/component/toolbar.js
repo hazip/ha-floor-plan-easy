@@ -11,7 +11,7 @@ export class Toolbar {
     this.editorState = new EditorState();
     this._backgroundSettingsDialog = new BackgroundSettingsDialog(this.editorState);
     this._wallSettingsDialog = new WallSettingsDialog(this.editorState);
-    this._saveFloorDialog = new SaveFloorDialog();
+    this._saveFloorDialog = new SaveFloorDialog(root);
     this._loadFloorDialog = new LoadFloorDialog(root);
   }
 
@@ -151,7 +151,7 @@ export class Toolbar {
       ?.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        await this._loadFloorDialog.open();
+        await this._loadFloorDialog.open(this.root._hass);
       });
 
     const on = (sel, fn) => this.root.querySelector(sel)?.addEventListener("click", (e) => {

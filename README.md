@@ -168,3 +168,5 @@ Documentation for contributors lives in the [`docs/`](docs/) directory:
 
 - [Backend architecture](docs/backend.md) — structure and behaviour of the
   Home Assistant integration (storage layer and WebSocket API).
+- [Frontend architecture](docs/frontend.md) — structure, components, and
+  runtime flow of the Lovelace cards (model layer, renderer, editor, dialogs).

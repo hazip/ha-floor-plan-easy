@@ -2,22 +2,27 @@ import { BaseApp } from "./base-app.js";
 
 export class FloorPlanEasyCard extends BaseApp {
 
-  async setConfig(config) {
+  setConfig(config) {
     this.config = config;
-    this._loadFloor();
+    this._maybeLoadFloor();
     this._queueRender();
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._loadFloor();
+    this._maybeLoadFloor();
     this._queueRender();
   }
 
-  async _loadFloor() {
-    if (!this._hass || !this.config?.floor_id) return;
+  // The hass setter fires on every state change, so only (re)fetch the floor
+  // when the configured floor_id actually changes — not on every tick.
+  _maybeLoadFloor() {
+    const floorId = this.config?.floor_id;
+    if (!this._hass || !floorId) return;
+    if (floorId === this._loadedFloorId) return;
 
-    await this.loadFloor(this.config.floor_id);
+    this._loadedFloorId = floorId;
+    this.loadFloor(floorId);
   }
 
   _get_html_template() {
@@ -30,8 +35,6 @@ export class FloorPlanEasyCard extends BaseApp {
   }
 
   _gridClickHandler(row, col, tile) {
-    console.log("VIEWER", row, col, tile);
-
     if (tile?.content) {
       this._performTapAction(tile.content);
     }

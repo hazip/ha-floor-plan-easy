@@ -55,7 +55,7 @@ export function ensureStyles(hostEl) {
       justify-content: center;
     }
 
-    /* kattintható ikon gomb */
+    /* clickable icon button */
     .tile-icon-btn {
       all: unset;
       cursor: pointer;
@@ -202,20 +202,20 @@ export function ensureStyles(hostEl) {
     }
 
     .fp-pattern-preview{
-      width: 40px;               /* ✅ ne %-ot használjunk */
-      height: 40px;              /* ✅ ne %-ot használjunk */
+      width: 40px;               /* fixed px, not % */
+      height: 40px;              /* fixed px, not % */
       border-radius: 8px;
       background-repeat: no-repeat;
       background-position: center;
       background-size: contain;
       color: var(--primary-text-color);
-      pointer-events: none;      /* a tile kapja a clicket */
-      display:flex;              /* hogy a "—" is középen legyen */
+      pointer-events: none;      /* the tile receives the click */
+      display:flex;              /* keep the "—" centered too */
       align-items:center;
       justify-content:center;
     }
 
-    /* MODAL */
+    /* MODAL — currently unused (dialogs use <ha-dialog>); kept for reference. */
 
     .fp-overlay {
       position: fixed;

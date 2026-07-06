@@ -57,7 +57,12 @@ export class BaseApp extends HTMLElement {
   }
 
   _gridClickHandler(row, col, tile) {
-    console.log("Tile clicked: ", row, col, tile);
+    // No-op in the base viewer; subclasses handle clicks.
+  }
+
+  _renderFloor() {
+    this._renderer?.setHass?.(this._hass);
+    this._renderer?.render?.(this.floor);
   }
 
   _getMode() {
@@ -90,14 +95,14 @@ export class BaseApp extends HTMLElement {
 
     this.updateWindowTitle();
 
-    this._renderer?.render?.(this.floor);
+    this._renderFloor();
   }
 
   updateWindowTitle() {
     const title = this.querySelector(".window-title");
 
     if (title) {
-      title.innerHTML = (this.floor?.name ?? "EMPTY PROJECT") + " - FloorPlan Easy";
+      title.textContent = (this.floor?.name ?? "EMPTY PROJECT") + " - FloorPlan Easy";
     }
   }
 
@@ -113,7 +118,7 @@ export class BaseApp extends HTMLElement {
 
     this.updateWindowTitle();
 
-    this._renderer?.render?.(this.floor);
+    this._renderFloor();
   }
 
   addTiles(direction) {
@@ -132,7 +137,7 @@ export class BaseApp extends HTMLElement {
         break;
     }
 
-    this._renderer?.render?.(this.floor);
+    this._renderFloor();
   }
 
   async loadFloor(floor_id) {
@@ -140,11 +145,15 @@ export class BaseApp extends HTMLElement {
       type: "floor_plan_easy/get_floor",
       floor_id: floor_id,
     });
-    
-    this.floor = new Floor(resp.data);
+
+    // resp.data is null when the floor does not exist yet; fall back to an
+    // empty floor instead of letting the Floor constructor throw on a missing id.
+    this.floor = resp?.data
+      ? new Floor(resp.data)
+      : new Floor({ id: floor_id, name: floor_id, gridWidth: 0, gridHeight: 0 });
 
     this.updateWindowTitle();
 
-    this._renderer?.render?.(this.floor);
+    this._renderFloor();
   }
 }

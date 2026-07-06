@@ -1,6 +1,11 @@
-const LitElementBase = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
-const LitElement = LitElementBase.prototype.constructor;
-const html = LitElementBase.prototype.html;
+// Home Assistant does not export LitElement, so we borrow it from a built-in
+// element. Guard against it not being defined yet at import time: a throw here
+// would abort the whole module and take the card registration down with it.
+const lovelace = customElements.get("ha-panel-lovelace");
+const LitElementBase = lovelace ? Object.getPrototypeOf(lovelace) : null;
+const LitElement = LitElementBase ? LitElementBase.prototype.constructor : HTMLElement;
+const html = LitElementBase ? LitElementBase.prototype.html : (strings, ...values) =>
+  strings.reduce((acc, s, i) => acc + s + (i < values.length ? values[i] : ""), "");
 
 export class FloorPlanEasyConfig extends LitElement {
   
@@ -120,7 +125,7 @@ export class FloorPlanEasyConfig extends LitElement {
       title: "Floor Plan Editor",
       content: {
         type: "custom:floor-plan-easy-editor",
-        config: this.config,
+        floor_id: this._config.floor_id,
       },
       size: "fullscreen",
     });

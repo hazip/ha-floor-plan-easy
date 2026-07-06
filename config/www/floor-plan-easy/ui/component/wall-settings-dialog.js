@@ -26,7 +26,8 @@ export class WallSettingsDialog {
 
         const fg = document.createElement("input");
         fg.type = "color";
-        fg.value = this._editorState.bg.fgColor || "#ffffff";
+        // fg.value = this._editorState.bg.fgColor || "#ffffff";
+        fg.value = this._editorState.wall.fgColor || "#ffffff";
 
         const patternsWrap = document.createElement("div");
         patternsWrap.style.display = "flex";
@@ -42,7 +43,8 @@ export class WallSettingsDialog {
         grid.className = "fp-pattern-grid";
 
         const setActive = (key) => {
-            this._editorState.bg.patternKey = key;
+            // this._editorState.bg.patternKey = key;
+            this._editorState.wall.patternKey = key;
             grid.querySelectorAll(".fp-pattern-tile").forEach((t) => {
                 t.classList.toggle("active", t.dataset.key === key);
             });

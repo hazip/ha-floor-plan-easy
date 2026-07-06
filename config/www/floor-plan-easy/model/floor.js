@@ -14,7 +14,7 @@ export class Floor {
     }
 
     this.id = id; // eg. "ground", "first", "garage"
-    this.version = version
+    this.version = version;
     this.name = name || id;
     this.gridWidth = gridWidth || 0;
     this.gridHeight = gridHeight || 0;
