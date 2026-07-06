@@ -62,7 +62,11 @@ export class FloorPlanEasyConfig extends LitElement {
     }
 
     return html`<ha-alert alert-type="warning">
-      TODO HELPER TEXT
+      The floor plan editor requires the
+      <a href="https://github.com/thomasloven/hass-browser_mod" target="_blank" rel="noopener">Browser Mod</a>
+      integration, which is not installed. Install and set it up to open the editor from here.
+      Alternatively, you can add the editor as a separate card manually —
+      see the <a href="/local/floor-plan-easy/docs.html" target="_blank" rel="noopener">documentation</a>.
     </ha-alert>`;
   }
 
@@ -72,7 +76,8 @@ export class FloorPlanEasyConfig extends LitElement {
     const current = this._config.floor_id || "";
 
     const items = this._floors || [];
-    
+    const noFloors = !this._loadingFloors && !this._floorsError && !items.length;
+
     return html`
       <div style="display:flex; flex-direction:column; gap:16px; padding:16px;">
 
@@ -82,18 +87,25 @@ export class FloorPlanEasyConfig extends LitElement {
             ? html`<div style="color:var(--error-color);">${this._floorsError}</div>`
             : null}
 
-        <ha-combo-box
-          id="floorCombo"
-          .label=${"Floor"}
-          .items=${items}
-          .itemValuePath=${"id"}
-          .itemLabelPath=${"name"}
-          .value=${current}
-          .disabled=${this._loadingFloors || !items.length}
-          @value-changed=${this._onFloorValueChanged}
-          @closed=${this._stopEvent}
-          @closing=${this._stopEvent}
-        ></ha-combo-box>
+        ${noFloors
+          ? html`<ha-alert alert-type="info">
+              No floors have been defined yet. Open the editor below to create
+              and save your first floor, then select it here.
+            </ha-alert>`
+          : html`<ha-combo-box
+              id="floorCombo"
+              .label=${"Floor"}
+              .items=${items}
+              .itemValuePath=${"id"}
+              .itemLabelPath=${"name"}
+              .value=${current}
+              .disabled=${this._loadingFloors}
+              @value-changed=${this._onFloorValueChanged}
+              @closed=${this._stopEvent}
+              @closing=${this._stopEvent}
+            ></ha-combo-box>`}
+
+        ${this._renderEditButton()}
 
       </div>
     `;

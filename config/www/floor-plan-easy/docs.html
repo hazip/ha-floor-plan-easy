@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Floor Plan Easy — Editor without Browser Mod</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+      color: #1c1c1c;
+      background: #fff;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e4e4e4; background: #1c1c1c; }
+      code, pre { background: #2a2a2a; color: #e4e4e4; }
+      pre { border-color: #3a3a3a; }
+      .note { background: #23291f; border-color: #4a5a2f; color: #e4e4e4; }
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 0.2em; }
+    h2 { font-size: 1.2rem; margin-top: 2em; }
+    code {
+      background: #f0f0f0;
+      color: #1c1c1c;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    pre {
+      background: #f0f0f0;
+      color: #1c1c1c;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 14px 16px;
+      overflow-x: auto;
+    }
+    pre code { background: none; padding: 0; color: inherit; }
+    ol { padding-left: 1.3em; }
+    li { margin: 0.5em 0; }
+    .note {
+      background: #f5f9ec;
+      color: #1c1c1c;
+      border: 1px solid #cfe0a8;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 1.5em 0;
+      font-size: 0.95em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Adding the Floor Plan editor without Browser Mod</h1>
+
+  <p>
+    The recommended way to open the editor is via the
+    <strong>Browser&nbsp;Mod</strong> integration — with it installed, an
+    <em>“Open editor”</em> button appears in this card's configuration panel.
+  </p>
+
+  <p>
+    If you don't want to install Browser&nbsp;Mod, you can place the editor
+    directly on a dashboard as its own card. It is fully functional on its own:
+    it starts with an empty floor and has a toolbar for loading and saving
+    floors.
+  </p>
+
+  <h2>Steps</h2>
+  <ol>
+    <li>Open your dashboard and enter <strong>Edit dashboard</strong> mode.</li>
+    <li>
+      Create a new <strong>view (tab)</strong> for the editor — this keeps it
+      separate from your normal cards.
+    </li>
+    <li>
+      In that view choose <strong>Add card</strong>, scroll to the bottom, and
+      pick <strong>Manual</strong> (the YAML card).
+    </li>
+    <li>Paste the following configuration:</li>
+  </ol>
+
+  <pre><code>type: custom:floor-plan-easy-editor</code></pre>
+
+  <ol start="5">
+    <li>Save the card. The full editor now appears on that tab.</li>
+    <li>
+      Use the editor's toolbar to load an existing floor or to save your work
+      to the backend.
+    </li>
+  </ol>
+
+  <div class="note">
+    <strong>Why isn't the editor in the card picker?</strong><br />
+    Only the viewer card (<code>custom:floor-plan-easy</code>) is registered in
+    the visual card picker, to avoid confusing users with two similar-looking
+    cards. The editor is added manually via the Manual/YAML card as shown above.
+  </div>
+</body>
+</html>
