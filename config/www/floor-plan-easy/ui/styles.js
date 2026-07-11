@@ -43,7 +43,19 @@ export function ensureStyles(hostEl) {
       pointer-events: none;
       background-repeat: no-repeat;
       background-position: center;
-      background-size: contain;
+      /* 100% 100% (not contain): fill the square tile exactly so the motif
+         reaches every edge regardless of the SVG's intrinsic size. */
+      background-size: 100% 100%;
+    }
+
+    .tile-object {
+      position: absolute;
+      inset: 0;
+      z-index: 7;
+      pointer-events: none;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 100% 100%;
     }
 
     .tile-content {
@@ -167,6 +179,56 @@ export function ensureStyles(hostEl) {
       font-size: 13px;
     }
 
+    /* TOOLBAR DROPDOWN */
+
+    .tool-dropdown{
+      position: relative;
+      display: inline-flex;
+    }
+
+    .tool-dropdown-menu{
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 220px;
+      padding: 6px;
+      background: var(--card-background-color);
+      border: 1px solid var(--divider-color);
+      border-radius: 10px;
+      box-shadow: var(--ha-card-box-shadow, 0 2px 12px rgba(0,0,0,0.25));
+    }
+
+    .tool-dropdown-menu[hidden]{
+      display: none;
+    }
+
+    .tool-dropdown-item{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border: none;
+      background: transparent;
+      color: var(--primary-text-color);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .tool-dropdown-item:hover{
+      background: rgba(0,0,0,0.06);
+    }
+
+    .tool-dropdown-item ha-icon{
+      --mdc-icon-size: 20px;
+    }
+
     .fp-pattern-grid{
       display: grid;
       grid-template-columns: repeat(auto-fill, 56px);
@@ -177,7 +239,7 @@ export function ensureStyles(hostEl) {
     .fp-pattern-tile{
       width: 56px;
       height: 56px;
-      border-radius: 12px;
+      border-radius: 0;
       border: 1px solid rgba(0,0,0,0.18);
       background: rgba(250,250,250,0.9);
       cursor: pointer;
@@ -197,17 +259,17 @@ export function ensureStyles(hostEl) {
     }
 
     .fp-pattern-tile.active{
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 25%, transparent);
+      border: 3px solid var(--primary-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 40%, transparent);
     }
 
     .fp-pattern-preview{
       width: 40px;               /* fixed px, not % */
       height: 40px;              /* fixed px, not % */
-      border-radius: 8px;
+      border-radius: 0;
       background-repeat: no-repeat;
       background-position: center;
-      background-size: contain;
+      background-size: 100% 100%;   /* fill the square preview, reach all edges */
       color: var(--primary-text-color);
       pointer-events: none;      /* the tile receives the click */
       display:flex;              /* keep the "—" centered too */

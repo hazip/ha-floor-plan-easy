@@ -1,16 +1,4 @@
-export class TileWall {
-  constructor({
-    svg = null,
-    strokeColor = null
-  } = {}) {
-    this.svg = svg;
-    this.strokeColor = strokeColor;
-  }
+import { TileSvgLayer } from "./tile-svg-layer.js";
 
-  toJSON() {
-    return {
-      svg: this.svg,
-      strokeColor: this.strokeColor
-    };
-  }
-}
+// Wall overlay: structural walls, door openings and windows.
+export class TileWall extends TileSvgLayer {}

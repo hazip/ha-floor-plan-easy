@@ -3,6 +3,8 @@ export const EditorMode = {
   BACKGROUND_CLEAR: "background_clear",
   WALL_SET: "wall_set",
   WALL_CLEAR: "wall_clear",
+  OBJECT_SET: "object_set",
+  OBJECT_CLEAR: "object_clear",
   CONTENT_EDIT: "content_edit",
   CONTENT_CLEAR: "content_clear",
 };
@@ -19,7 +21,12 @@ export class EditorState {
 
     this.wall = {
       fgColor: "#ffffff",
-      patternKey: "corner1"
+      patternKey: "wall-top"
+    }
+
+    this.object = {
+      fgColor: "#ffffff",
+      patternKey: "bed"
     }
 
     this.contentTemplate = {

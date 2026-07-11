@@ -39,7 +39,9 @@ export class FloorRenderer {
       this._applyBackground(el, tile.background);
     }
 
-    this._renderTileWall(el, tile);
+    this._renderSvgLayer(el, tile?.wall, "tile-wall");
+
+    this._renderSvgLayer(el, tile?.object, "tile-object");
 
     el.addEventListener("click", () => {
       this.onTileClick?.({ row, col, tile });
@@ -63,7 +65,10 @@ export class FloorRenderer {
 
       const svg = encodeURIComponent(_svg);
       el.style.backgroundImage = `url("data:image/svg+xml,${svg}")`;
-      el.style.backgroundSize = "contain";
+      // 100% 100% (not "contain") scales the SVG to the exact tile size, so the
+      // motif reaches every edge regardless of the SVG's intrinsic size — the
+      // tile and the 0..100 viewBox are both square, so there is no distortion.
+      el.style.backgroundSize = "100% 100%";
       el.style.backgroundRepeat = "no-repeat";
       el.style.backgroundPosition = "center";
 
@@ -73,26 +78,26 @@ export class FloorRenderer {
     }
   }
 
-  _renderTileWall(tileEl, tile) {
+  // Paint one recolored SVG overlay (wall or object) onto the tile, replacing any
+  // previous layer of the same class. No-ops when the layer is absent or carries
+  // no svg (e.g. malformed stored data) — guarding svg avoids a replace() throw
+  // that would abort the whole grid render.
+  _renderSvgLayer(tileEl, layer, className) {
+    tileEl.querySelector(`.${className}`)?.remove();
 
-    tileEl.querySelector(".tile-wall")?.remove();
+    if (!layer?.svg) return;
 
-    const wall = tile?.wall;
-    if (!wall) return;
+    const el = document.createElement("div");
+    el.className = className;
 
-    const layer = document.createElement("div");
-    layer.className = "tile-wall";
-
-    let _svg = wall.svg;
-
-    if (wall.strokeColor) {
-      _svg = _svg.replace(/currentColor/g, wall.strokeColor);
+    let _svg = layer.svg;
+    if (layer.strokeColor) {
+      _svg = _svg.replace(/currentColor/g, layer.strokeColor);
     }
 
-    const svg = encodeURIComponent(_svg);
-    layer.style.backgroundImage = `url("data:image/svg+xml,${svg}")`;
+    el.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(_svg)}")`;
 
-    tileEl.appendChild(layer);
+    tileEl.appendChild(el);
   }
 
   _renderTileContent(tileEl, tile) {

@@ -26,6 +26,7 @@ export default {
   "toolbar.section.file": "Fájl",
   "toolbar.section.background": "Háttér eszközök",
   "toolbar.section.wall": "Fal eszközök",
+  "toolbar.section.object": "Objektum eszközök",
   "toolbar.section.tile": "Csempe eszközök",
   "toolbar.section.resize": "Rács átméretezése",
 
@@ -39,6 +40,9 @@ export default {
   "toolbar.wall.set": "Fal beállítása",
   "toolbar.wall.settings": "Falbeállítások",
   "toolbar.wall.clear": "Fal törlése",
+  "toolbar.object.set": "Objektum beállítása",
+  "toolbar.object.settings": "Objektumbeállítások",
+  "toolbar.object.clear": "Objektum törlése",
   "toolbar.tile.edit": "Csempe tartalmának szerkesztése",
   "toolbar.tile.clear": "Csempe tartalmának törlése",
   "toolbar.resize.add_col_left": "Oszlop hozzáadása balra",
@@ -55,10 +59,12 @@ export default {
   "wall_dialog.heading": "Falbeállítások",
   "wall_dialog.color": "Fal színe",
 
+  // Objektumbeállítások párbeszédablak
+  "object_dialog.heading": "Objektumbeállítások",
+  "object_dialog.color": "Objektum színe",
+
   // Alaprajz mentése párbeszédablak
   "save_dialog.heading": "Alaprajz mentése",
-  "save_dialog.id": "Azonosító",
-  "save_dialog.id_helper": "A névből generálva",
   "save_dialog.name": "Név",
   "save_dialog.save_as": "Mentés másként",
   "save_dialog.save_failed": "A mentés nem sikerült. Próbáld újra.",

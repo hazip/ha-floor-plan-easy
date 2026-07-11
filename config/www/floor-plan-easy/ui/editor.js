@@ -3,7 +3,8 @@ import { Floor } from "../model/floor.js";
 import { Tile } from "../model/tile.js";
 import { TileBackground } from "../model/tile-background.js";
 import { TileWall } from "../model/tile-wall.js";
-import { BACKGROUND_PATTERNS, WALL_PATTERNS } from "./patterns.js";
+import { TileObject } from "../model/tile-object.js";
+import { BACKGROUND_PATTERNS, WALL_PATTERNS, OBJECT_PATTERNS } from "./patterns.js";
 import { Toolbar } from "./component/toolbar.js";
 import { TileEntityDialog } from "./component/tile-entity-dialog.js";
 import { DraftStore } from "../storage/draft-store.js";
@@ -149,35 +150,31 @@ export class FloorPlanEasyEditor extends BaseApp {
   async _gridClickHandler(row, col, tile) {
     const mode = this._toolbar.editorState.activeMode;
 
-    if (mode === "background_set") {
+    // background / wall / object share the same shape: "set" builds a layer on a
+    // (created-if-missing) tile, "clear" nulls it out. Only the layer differs.
+    const SET = {
+      background_set: (t) => this._applyBackgroundToTile(t),
+      wall_set: (t) => this._applyWallToTile(t),
+      object_set: (t) => this._applyObjectToTile(t),
+    };
+    const CLEAR = {
+      background_clear: "background",
+      wall_clear: "wall",
+      object_clear: "object",
+    };
+
+    if (SET[mode]) {
       if (!tile) {
         tile = this._ensureTile(row, col);
       }
-      this._applyBackgroundToTile(tile);
+      SET[mode](tile);
       this._renderFloor();
       return;
     }
 
-    if (mode === "background_clear") {
+    if (CLEAR[mode]) {
       if (tile) {
-        tile.background = null;
-      }
-      this._renderFloor();
-      return;
-    }
-
-    if (mode === "wall_set") {
-      if (!tile) {
-        tile = this._ensureTile(row, col);
-      }
-      this._applyWallToTile(tile);
-      this._renderFloor();
-      return;
-    }
-
-    if (mode === "wall_clear") {
-      if (tile) {
-        tile.wall = null;
+        tile[CLEAR[mode]] = null;
       }
       this._renderFloor();
       return;
@@ -218,6 +215,13 @@ export class FloorPlanEasyEditor extends BaseApp {
     tile.wall = new TileWall({
       svg: WALL_PATTERNS[this._toolbar.editorState.wall.patternKey],
       strokeColor: this._toolbar.editorState.wall.fgColor
+    });
+  }
+
+  _applyObjectToTile(tile) {
+    tile.object = new TileObject({
+      svg: OBJECT_PATTERNS[this._toolbar.editorState.object.patternKey],
+      strokeColor: this._toolbar.editorState.object.fgColor
     });
   }
 

@@ -27,9 +27,11 @@ resource loaded by Home Assistant. It:
 floor-plan-easy.js          entry point / custom-element registration
 model/                      plain data classes (no DOM)
   floor.js                  Floor: grid + tiles, JSON (de)serialization
-  tile.js                   Tile: row/col + background/wall/content
+  tile.js                   Tile: row/col + background/wall/object/content
   tile-background.js        TileBackground: color or SVG pattern
-  tile-wall.js              TileWall: SVG pattern + stroke color
+  tile-svg-layer.js         TileSvgLayer: shared base (svg + strokeColor)
+  tile-wall.js              TileWall: SVG wall layer (extends TileSvgLayer)
+  tile-object.js            TileObject: SVG object layer (extends TileSvgLayer)
   tile-content.js           TileContent: entity binding, icon/badge, tap action
   editor-state.js           EditorState + EditorMode: active tool + tool settings
 storage/
@@ -40,17 +42,19 @@ ui/
   editor.js                 FloorPlanEasyEditor: interactive editor
   config.js                 FloorPlanEasyConfig: Lit-based card config panel
   floor-renderer.js         FloorRenderer: turns a Floor into grid DOM
-  patterns.js               built-in + user-overridable BACKGROUND/WALL patterns
+  patterns.js               built-in + user-overridable BACKGROUND/WALL/OBJECT patterns
   styles.js                 ensureStyles(): injects the shared stylesheet once
   i18n/
     index.js                localize() / localizeParts(): key → localized string
     en.js                   English strings (mandatory fallback)
     hu.js                   Hungarian strings
   component/
-    toolbar.js              editor toolbar (tools, file ops, grid resize)
+    toolbar.js              editor toolbar (tools, file ops, grid-resize "+" menu)
     tile-entity-dialog.js   bind a tile to an entity (icon/badge, tap action)
+    pattern-settings-dialog.js      shared "color + pattern" dialog base
     background-settings-dialog.js   pick background color + pattern
     wall-settings-dialog.js         pick wall color + pattern
+    object-settings-dialog.js       pick object color + pattern
     save-floor-dialog.js    name + save the current floor
     load-floor-dialog.js    list + load a saved floor
 ```
@@ -71,13 +75,16 @@ that mirrors its constructor input, so `new Floor(floor.toJSON())` round-trips.
   `addRow*/addColumn*` helpers grow the grid and shift existing tiles when
   space is inserted on the top/left. Requires an `id` (throws otherwise).
 - **`Tile`** — a cell at `row`/`col` with an auto-generated `id`
-  (`crypto.randomUUID()`) and three optional layers: `background`, `wall`,
-  `content`. The constructor rehydrates nested plain objects into their model
-  classes, so a tile loaded from JSON has real `TileBackground`/`TileWall`/
-  `TileContent` instances.
+  (`crypto.randomUUID()`) and four optional layers: `background`, `wall`,
+  `object`, `content`. The constructor rehydrates nested plain objects into their
+  model classes, so a tile loaded from JSON has real `TileBackground`/`TileWall`/
+  `TileObject`/`TileContent` instances.
 - **`TileBackground`** — `type: "color" | "pattern"`; a solid `color` and, for
   patterns, an inline SVG string plus `strokeColor`.
-- **`TileWall`** — an inline SVG pattern + `strokeColor`.
+- **`TileSvgLayer`** — shared base for single-SVG overlays: an inline SVG string
+  plus `strokeColor`. **`TileWall`** (walls, door openings, windows) and
+  **`TileObject`** (furniture, door leaves, above the wall) extend it unchanged —
+  they exist only to name the layer.
 - **`TileContent`** — an entity binding: `renderType: "icon" | "badge"`,
   optional `icon`, `entity`, and `tapAction: "none" | "toggle" | "more-info"`.
 - **`EditorState`** — the editor's transient tool state: the `activeMode` (one
@@ -148,11 +155,23 @@ Extends `BaseApp` and adds the toolbar and editing interactions.
   restore — a saved floor keeps its draft so reopening restores the same working
   state.
 - `_gridClickHandler` dispatches on the toolbar's `activeMode`: set/clear
-  background, set/clear wall, edit/clear content. "Set" modes create a tile if
-  the clicked cell is empty (`_ensureTile`) and apply the current tool settings
-  via `_applyBackgroundToTile` / `_applyWallToTile`.
+  background, set/clear wall, set/clear object, edit/clear content. "Set" modes
+  create a tile if the clicked cell is empty (`_ensureTile`) and apply the current
+  tool settings via `_applyBackgroundToTile` / `_applyWallToTile` /
+  `_applyObjectToTile`.
 - `_doRender` calls `super._doRender()`, then wires the toolbar once and refreshes
   its active-tool highlight.
+- **Settings dialogs.** The background/wall/object settings dialogs share a
+  `PatternSettingsDialog` base and differ only in a small `_config()` (registry,
+  editor-state slice, heading, color rows, whether a "None" tile is shown). They
+  take an `onApply` callback; applying settings switches `activeMode` to that
+  tool's "set" mode so the user can immediately paint with the chosen settings.
+  The dialogs render with a transparent scrim (`--mdc-dialog-scrim-color`) so the
+  color-picker eyedropper can sample colors from the floor plan behind them.
+- **Grid resize.** The add-row / add-column actions live in a "+" dropdown
+  (`.tool-dropdown-menu`) that toggles open on click and dismisses on outside
+  click (the outside-click listener is attached only while the menu is open, so
+  it never outlives the card); each item calls `root.addTiles(<direction>)`.
 
 ### `FloorPlanEasyConfig` (card config panel)
 
@@ -177,7 +196,9 @@ Stateless-ish renderer that converts a `Floor` into grid DOM:
   width, and appends one `.tile` per cell (row-major).
 - Each tile paints its layers in z-order: background (solid color or an SVG
   data-URI with `currentColor` swapped for `strokeColor`), then a `.tile-wall`
-  overlay, then `.tile-content`.
+  and `.tile-object` overlay, then `.tile-content`. Both SVG overlays are drawn
+  by one `_renderSvgLayer(el, layer, className)` helper (no-op when the layer is
+  absent or has no `svg`).
 - Content renders either as an icon button (`ha-icon`, or `ha-state-icon` when
   bound to an entity) or as a badge showing the entity state + unit.
 - `setHass(hass)` updates the reference used for live entity state.
@@ -188,11 +209,16 @@ Stateless-ish renderer that converts a `Floor` into grid DOM:
   into the correct root (the element's `ShadowRoot` if present, else
   `document.head`) and no-ops if it already exists — so styles are added once per
   root regardless of how many dialogs/cards mount.
-- `patterns.js` holds the inline SVG templates for backgrounds and walls. They
-  use `stroke="currentColor"`, which the renderer replaces with the chosen color
-  before encoding as a data URI.
+- `patterns.js` holds the inline SVG templates for backgrounds, walls and
+  objects. They use `stroke`/`fill="currentColor"`, which the renderer replaces
+  with the chosen color before encoding as a data URI.
+- **SVG sizing.** Every template is `100 × 100` (both `viewBox` and explicit
+  `width`/`height`) and is painted with `background-size: 100% 100%`, i.e.
+  stretched to the exact — always square — tile. So a motif must be drawn across
+  the full `0..100` box to reach the tile edges; anything short of `100` leaves a
+  gap (this is what made an off-by-one wave path stop before the right edge).
 - **User-overridable patterns.** The exported `BACKGROUND_PATTERNS` /
-  `WALL_PATTERNS` start as copies of the built-ins and are **mutated in place**
+  `WALL_PATTERNS` / `OBJECT_PATTERNS` start as copies of the built-ins and are **mutated in place**
   (`Object.assign`) so every module that imported them keeps seeing the merged
   result — the object references stay stable, no re-import needed. At module load,
   `patterns.js` looks for an optional user file at
@@ -249,7 +275,7 @@ changes.
 ```
 toolbar button ──► EditorState.activeMode = <mode>
 tile click     ──► _gridClickHandler(mode)
-                     ├─ set:   _ensureTile ─► _applyBackground/Wall/Content ─► _renderFloor
+                     ├─ set:   _ensureTile ─► _applyBackground/Wall/Object/Content ─► _renderFloor
                      └─ clear: tile.<layer> = null ─────────────────────────► _renderFloor
 ```
 
@@ -303,6 +329,6 @@ from inner menus/pickers).
   every mutation renders. New mutation paths must go through `_renderFloor` (not
   `renderer.render` directly) or the change won't be persisted.
 - **Stable pattern references.** Never reassign `BACKGROUND_PATTERNS` /
-  `WALL_PATTERNS`; mutate in place. Other modules hold the imported reference, and
+  `WALL_PATTERNS` / `OBJECT_PATTERNS`; mutate in place. Other modules hold the imported reference, and
   the user-pattern loader merges into it asynchronously. Read them only after
   `await patternsReady` when completeness matters.

@@ -36,18 +36,11 @@ export class SaveFloorDialog {
     host.style.gap = "16px";
     host.style.padding = "0 4px";
 
-    const idField = document.createElement("ha-textfield");
-    idField.label = localize("save_dialog.id", hass);
-    idField.value = floor.id || "unnamed";
-    idField.readOnly = true;
-    idField.helper = localize("save_dialog.id_helper", hass);
-    idField.persistentHelper = true;
-
     const nameField = document.createElement("ha-textfield");
     nameField.label = localize("save_dialog.name", hass);
     nameField.value = floor.name || floor.id;
 
-    host.append(nameField, idField);
+    host.append(nameField);
 
     const cancel = document.createElement("ha-button");
     cancel.slot = "secondaryAction";
@@ -60,15 +53,17 @@ export class SaveFloorDialog {
 
     nameField.addEventListener("input", (e) => {
       const name = e.target.value;
-      const slug = toFloorId(name);
-      idField.value = slug;
       save.textContent = (name !== floor.name) ? localize("save_dialog.save_as", hass) : localize("common.save", hass);
       save.disabled = name.length === 0;
     });
 
     save.addEventListener("click", async () => {
-      const id = (idField.value || "").trim();
       const name = (nameField.value || "").trim();
+      // Plain "Save" (name unchanged) keeps the floor's existing id so an
+      // already-stored floor is overwritten in place — even when its id does not
+      // match slug(name) (e.g. an id set outside the editor). Only a rename
+      // ("Save as") derives a fresh id from the new name.
+      const id = (name === floor.name && floor.id) ? floor.id : toFloorId(name);
       if (!id) return;
 
       // Update the floor model before serializing.
@@ -93,7 +88,8 @@ export class SaveFloorDialog {
         dialog.open = false;
       } catch (err) {
         console.error(err);
-        idField.helper = localize("save_dialog.save_failed", hass);
+        nameField.helper = localize("save_dialog.save_failed", hass);
+        nameField.persistentHelper = true;
         save.disabled = false;
       }
     });

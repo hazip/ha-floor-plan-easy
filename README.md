@@ -147,9 +147,9 @@ Tiles bound to an entity support a tap action:
 
 ---
 
-## Custom patterns (backgrounds & walls)
+## Custom patterns (backgrounds, walls & objects)
 
-The editor's background and wall pickers are populated from a built-in pattern
+The editor's background, wall and object pickers are populated from a built-in pattern
 library. You can **add your own patterns** — or override the built-in ones —
 without editing the card's files, so your customizations survive card updates.
 
@@ -176,13 +176,14 @@ card never touches your patterns.
    config/www/floor-plan-easy-user-patterns.js
    ```
 
-2. Edit it. It exports two objects, `BACKGROUND_PATTERNS` and `WALL_PATTERNS`
-   (you may include just one). Each entry is a name mapped to an SVG string:
+2. Edit it. It exports `BACKGROUND_PATTERNS`, `WALL_PATTERNS` and
+   `OBJECT_PATTERNS` (you may include just the ones you need). Each entry is a
+   name mapped to an SVG string:
 
    ```js
    export const BACKGROUND_PATTERNS = {
      "dots": `
-       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+       <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
          <circle cx="25" cy="25" r="6" fill="currentColor"/>
          <circle cx="75" cy="75" r="6" fill="currentColor"/>
        </svg>`.trim(),
@@ -190,11 +191,13 @@ card never touches your patterns.
    ```
 
 3. Hard-refresh your dashboard (`Cmd/Ctrl + Shift + R`). The new patterns appear
-   in the editor's background/wall settings dialogs.
+   in the editor's background/wall/object settings dialogs.
 
 ### Rules
 
-- Use `viewBox="0 0 100 100"` for each SVG.
+- Use `viewBox="0 0 100 100"` for each SVG (setting `width="100" height="100"`
+  too is good practice). Patterns are stretched to fill the square tile, so draw
+  your motif across the full `0..100` box to reach the tile edges.
 - Use `stroke="currentColor"` and/or `fill="currentColor"` so the color chosen
   in the editor is applied at render time. Hard-coded colors ignore the pickers.
 - A key matching a **built-in name overrides** that built-in; a **new key adds**

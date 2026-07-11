@@ -1,6 +1,7 @@
 import { TileBackground } from "./tile-background.js";
 import { TileContent } from "./tile-content.js";
 import { TileWall } from "./tile-wall.js";
+import { TileObject } from "./tile-object.js";
 
 export class Tile {
   constructor({
@@ -9,6 +10,7 @@ export class Tile {
     col,
     background = null,
     wall = null,
+    object = null,
     content = null
   } = {}) {
     this.id = id || crypto.randomUUID();
@@ -23,6 +25,11 @@ export class Tile {
       ? new TileWall(wall)
       : null;
 
+    // Object overlay (furniture, door leaves) — rendered above the wall layer.
+    this.object = object
+      ? new TileObject(object)
+      : null;
+
     this.content = content
       ? new TileContent(content)
       : null;
@@ -35,6 +42,7 @@ export class Tile {
       col: this.col,
       background: this.background?.toJSON() || null,
       wall: this.wall?.toJSON() || null,
+      object: this.object?.toJSON() || null,
       content: this.content?.toJSON() || null,
     };
   }

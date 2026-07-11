@@ -1,6 +1,7 @@
-import { EditorState } from "../../model/editor-state.js";
+import { EditorState, EditorMode } from "../../model/editor-state.js";
 import { BackgroundSettingsDialog } from "./background-settings-dialog.js"
 import { WallSettingsDialog } from "./wall-settings-dialog.js"
+import { ObjectSettingsDialog } from "./object-settings-dialog.js"
 import { SaveFloorDialog } from "./save-floor-dialog.js"
 import { LoadFloorDialog } from "./load-floor-dialog.js"
 import { localize } from "../i18n/index.js";
@@ -12,6 +13,7 @@ export class Toolbar {
     this.editorState = new EditorState();
     this._backgroundSettingsDialog = new BackgroundSettingsDialog(this.editorState);
     this._wallSettingsDialog = new WallSettingsDialog(this.editorState);
+    this._objectSettingsDialog = new ObjectSettingsDialog(this.editorState);
     this._saveFloorDialog = new SaveFloorDialog(root);
     this._loadFloorDialog = new LoadFloorDialog(root);
   }
@@ -74,6 +76,24 @@ export class Toolbar {
 
         <div class="tool-separator"></div>
 
+        <!-- OBJECT -->
+        <div class="tool-section" aria-label="${t("toolbar.section.object")}">
+          <div class="tool-group split">
+            <button class="tool-btn tool-toggle" data-mode="object_set" title="${t("toolbar.object.set")}">
+              <ha-icon icon="mdi:sofa-outline"></ha-icon>
+            </button>
+            <button class="tool-btn tool-menu" data-action="object-settings" title="${t("toolbar.object.settings")}">
+              <ha-icon icon="mdi:chevron-down"></ha-icon>
+            </button>
+          </div>
+
+          <button class="tool-btn tool-toggle danger" data-mode="object_clear" title="${t("toolbar.object.clear")}">
+            <ha-icon icon="mdi:close"></ha-icon>
+          </button>
+        </div>
+
+        <div class="tool-separator"></div>
+
         <!-- CONTENT -->
         <div class="tool-section" aria-label="${t("toolbar.section.tile")}">
           <button class="tool-btn tool-toggle" data-mode="content_edit" title="${t("toolbar.tile.edit")}">
@@ -89,21 +109,33 @@ export class Toolbar {
 
         <!-- RESIZE -->
         <div class="tool-section" aria-label="${t("toolbar.section.resize")}">
-          <button class="tool-btn tool-plain" data-action="grid-add-col-left" title="${t("toolbar.resize.add_col_left")}">
-            <ha-icon icon="mdi:arrow-left-bold-box-outline"></ha-icon>
-          </button>
+          <div class="tool-dropdown">
+            <button class="tool-btn" data-action="grid-add-menu" title="${t("toolbar.section.resize")}" aria-haspopup="true" aria-expanded="false">
+              <ha-icon icon="mdi:plus"></ha-icon>
+            </button>
 
-          <button class="tool-btn tool-plain" data-action="grid-add-col-right" title="${t("toolbar.resize.add_col_right")}">
-            <ha-icon icon="mdi:arrow-right-bold-box-outline"></ha-icon>
-          </button>
+            <div class="tool-dropdown-menu" hidden>
+              <button class="tool-dropdown-item" data-action="grid-add-col-left">
+                <ha-icon icon="mdi:arrow-left-bold-box-outline"></ha-icon>
+                <span>${t("toolbar.resize.add_col_left")}</span>
+              </button>
 
-          <button class="tool-btn tool-plain" data-action="grid-add-row-top" title="${t("toolbar.resize.add_row_top")}">
-            <ha-icon icon="mdi:arrow-up-bold-box-outline"></ha-icon>
-          </button>
+              <button class="tool-dropdown-item" data-action="grid-add-col-right">
+                <ha-icon icon="mdi:arrow-right-bold-box-outline"></ha-icon>
+                <span>${t("toolbar.resize.add_col_right")}</span>
+              </button>
 
-          <button class="tool-btn tool-plain" data-action="grid-add-row-bottom" title="${t("toolbar.resize.add_row_bottom")}">
-            <ha-icon icon="mdi:arrow-down-bold-box-outline"></ha-icon>
-          </button>
+              <button class="tool-dropdown-item" data-action="grid-add-row-top">
+                <ha-icon icon="mdi:arrow-up-bold-box-outline"></ha-icon>
+                <span>${t("toolbar.resize.add_row_top")}</span>
+              </button>
+
+              <button class="tool-dropdown-item" data-action="grid-add-row-bottom">
+                <ha-icon icon="mdi:arrow-down-bold-box-outline"></ha-icon>
+                <span>${t("toolbar.resize.add_row_bottom")}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
 
@@ -121,18 +153,32 @@ export class Toolbar {
       });
     });
 
+    // Applying settings from a dialog also switches to that feature's "set"
+    // mode, so the user can immediately paint with the settings they just chose.
+    const activateMode = (mode) => {
+      this.editorState.activeMode = mode;
+      this.updateToolbarActiveState();
+    };
+
     const bgSettings = this.root.querySelector('.tool-menu[data-action="bg-settings"]');
     bgSettings?.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await this._backgroundSettingsDialog.open(this.root._hass);
+      await this._backgroundSettingsDialog.open(this.root._hass, () => activateMode(EditorMode.BACKGROUND_SET));
     });
 
     const wallSettings = this.root.querySelector('.tool-menu[data-action="wall-settings"]');
     wallSettings?.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      await this._wallSettingsDialog.open(this.root._hass);
+      await this._wallSettingsDialog.open(this.root._hass, () => activateMode(EditorMode.WALL_SET));
+    });
+
+    const objectSettings = this.root.querySelector('.tool-menu[data-action="object-settings"]');
+    objectSettings?.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await this._objectSettingsDialog.open(this.root._hass, () => activateMode(EditorMode.OBJECT_SET));
     });
 
     this.root.querySelector('[data-action="file-new"]')
@@ -156,10 +202,45 @@ export class Toolbar {
         await this._loadFloorDialog.open(this.root._hass);
       });
 
+    // Grid-resize actions live in a "+" dropdown to keep the toolbar compact.
+    const addMenuBtn = this.root.querySelector('[data-action="grid-add-menu"]');
+    const addMenu = this.root.querySelector(".tool-dropdown-menu");
+
+    // Dismiss the menu on any click outside of it. This listener is attached
+    // only while the menu is open (and removed on close), so it never outlives
+    // the toolbar — attaching it permanently to `document` would leak one stale
+    // listener per card re-creation (HA rebuilds the card on reconnect).
+    const onOutsideClick = (e) => {
+      const path = e.composedPath();
+      if (path.includes(addMenuBtn) || path.includes(addMenu)) return;
+      closeAddMenu();
+    };
+
+    const closeAddMenu = () => {
+      if (!addMenu || addMenu.hidden) return;
+      addMenu.hidden = true;
+      addMenuBtn?.setAttribute("aria-expanded", "false");
+      document.removeEventListener("click", onOutsideClick);
+    };
+
+    const openAddMenu = () => {
+      if (!addMenu || !addMenu.hidden) return;
+      addMenu.hidden = false;
+      addMenuBtn?.setAttribute("aria-expanded", "true");
+      document.addEventListener("click", onOutsideClick);
+    };
+
+    addMenuBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      addMenu.hidden ? openAddMenu() : closeAddMenu();
+    });
+
     const on = (sel, fn) => this.root.querySelector(sel)?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       fn();
+      closeAddMenu();
     });
 
     on('[data-action="grid-add-col-left"]',  () => this.root.addTiles("LEFT"));

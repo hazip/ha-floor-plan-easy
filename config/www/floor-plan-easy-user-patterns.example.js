@@ -11,19 +11,22 @@
 // the card (replacing that folder) will never overwrite your patterns.
 //
 // RULES
-//   • Each value is an SVG string with a `viewBox="0 0 100 100"`.
+//   • Each value is an SVG string with a `viewBox="0 0 100 100"` (setting
+//     `width="100" height="100"` too is good practice). Patterns are stretched to
+//     fill the square tile, so draw across the full 0..100 box to reach the edges.
 //   • Use stroke="currentColor" (and/or fill="currentColor") so the color you
 //     pick in the editor is applied at render time. Hard-coded colors ignore
 //     the editor's color pickers.
 //   • A key that matches a built-in name OVERRIDES that built-in.
 //     A new key ADDS a pattern. Anything you omit keeps its built-in value.
-//   • You may export just one of the two objects if you only customize one.
+//   • You may export just one of the objects if you only customize one.
+//     `OBJECT_PATTERNS` (furniture / door leaves) is also supported.
 // ─────────────────────────────────────────────────────────────────────────
 
 export const BACKGROUND_PATTERNS = {
     // Adds a new background option called "dots".
     "dots": `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
             <circle cx="25" cy="25" r="6" fill="currentColor"/>
             <circle cx="75" cy="25" r="6" fill="currentColor"/>
             <circle cx="25" cy="75" r="6" fill="currentColor"/>
@@ -33,18 +36,18 @@ export const BACKGROUND_PATTERNS = {
 };
 
 export const WALL_PATTERNS = {
-    // Overrides the built-in "corner1" with a thicker version.
-    "corner1": `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-            <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
-            <line x1="0" y1="0" x2="0" y2="100" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+    // Overrides the built-in "wall-top" with a thinner version.
+    "wall-top": `
+        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+            <rect x="0" y="0" width="100" height="6" fill="currentColor"/>
         </svg>
         `.trim(),
 
-    // Adds a full horizontal wall.
-    "top": `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+    // Adds a new custom option called "corner-thick".
+    "corner-thick": `
+        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
             <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+            <line x1="0" y1="0" x2="0" y2="100" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
         </svg>
         `.trim(),
 };

@@ -28,6 +28,7 @@ export default {
   "toolbar.section.file": "File",
   "toolbar.section.background": "Background tools",
   "toolbar.section.wall": "Wall tools",
+  "toolbar.section.object": "Object tools",
   "toolbar.section.tile": "Tile tools",
   "toolbar.section.resize": "Grid resize",
 
@@ -41,6 +42,9 @@ export default {
   "toolbar.wall.set": "Set wall",
   "toolbar.wall.settings": "Wall settings",
   "toolbar.wall.clear": "Clear wall",
+  "toolbar.object.set": "Set object",
+  "toolbar.object.settings": "Object settings",
+  "toolbar.object.clear": "Clear object",
   "toolbar.tile.edit": "Edit tile content",
   "toolbar.tile.clear": "Clear tile content",
   "toolbar.resize.add_col_left": "Add column left",
@@ -57,10 +61,12 @@ export default {
   "wall_dialog.heading": "Wall settings",
   "wall_dialog.color": "Wall color",
 
+  // Object settings dialog
+  "object_dialog.heading": "Object settings",
+  "object_dialog.color": "Object color",
+
   // Save floorplan dialog
   "save_dialog.heading": "Save floorplan",
-  "save_dialog.id": "Id",
-  "save_dialog.id_helper": "Generated from Name",
   "save_dialog.name": "Name",
   "save_dialog.save_as": "Save as",
   "save_dialog.save_failed": "Failed to save. Please try again.",
