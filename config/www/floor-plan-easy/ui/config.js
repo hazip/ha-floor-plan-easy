@@ -7,6 +7,8 @@ const LitElement = LitElementBase ? LitElementBase.prototype.constructor : HTMLE
 const html = LitElementBase ? LitElementBase.prototype.html : (strings, ...values) =>
   strings.reduce((acc, s, i) => acc + s + (i < values.length ? values[i] : ""), "");
 
+import { localize, localizeParts } from "./i18n/index.js";
+
 export class FloorPlanEasyConfig extends LitElement {
   
   static properties = {
@@ -51,7 +53,7 @@ export class FloorPlanEasyConfig extends LitElement {
       this._floors = resp?.floors || [];
     } catch (e) {
       console.error(e);
-      this._floorsError = "Failed to load floors.";
+      this._floorsError = localize("config.floors_load_failed", this._hass);
       this._floors = [];
     } finally {
       this._loadingFloors = false;
@@ -62,21 +64,22 @@ export class FloorPlanEasyConfig extends LitElement {
   _renderEditButton() {
     if (this._hasBrowserMod()) {
       return html`<ha-button @click=${this._edit}>
-        Open editor
+        ${localize("config.open_editor", this._hass)}
       </ha-button>`;
     }
 
+    // The message is a single translatable string with {browserMod} and {docs}
+    // placeholders so each language controls where the links land in the sentence.
+    const browserMod = html`<a href="https://github.com/thomasloven/hass-browser_mod" target="_blank" rel="noopener">Browser Mod</a>`;
+    const docs = html`<a href="/local/floor-plan-easy/docs.html" target="_blank" rel="noopener">${localize("common.documentation", this._hass)}</a>`;
+
     return html`<ha-alert alert-type="warning">
-      The floor plan editor requires the
-      <a href="https://github.com/thomasloven/hass-browser_mod" target="_blank" rel="noopener">Browser Mod</a>
-      integration, which is not installed. Install and set it up to open the editor from here.
-      Alternatively, you can add the editor as a separate card manually —
-      see the <a href="/local/floor-plan-easy/docs.html" target="_blank" rel="noopener">documentation</a>.
+      ${localizeParts("config.browser_mod.message", this._hass, { browserMod, docs })}
     </ha-alert>`;
   }
 
   render() {
-    if (!this._hass) return html`<p style="padding:16px">Loading hass…</p>`;
+    if (!this._hass) return html`<p style="padding:16px">${localize("config.loading_hass", this._hass)}</p>`;
 
     const current = this._config.floor_id || "";
 
@@ -87,19 +90,18 @@ export class FloorPlanEasyConfig extends LitElement {
       <div style="display:flex; flex-direction:column; gap:16px; padding:16px;">
 
         ${this._loadingFloors
-          ? html`<div style="opacity:0.7;">Loading floors…</div>`
+          ? html`<div style="opacity:0.7;">${localize("config.loading_floors", this._hass)}</div>`
           : this._floorsError
             ? html`<div style="color:var(--error-color);">${this._floorsError}</div>`
             : null}
 
         ${noFloors
           ? html`<ha-alert alert-type="info">
-              No floors have been defined yet. Open the editor below to create
-              and save your first floor, then select it here.
+              ${localize("config.no_floors", this._hass)}
             </ha-alert>`
           : html`<ha-combo-box
               id="floorCombo"
-              .label=${"Floor"}
+              .label=${localize("common.floor", this._hass)}
               .items=${items}
               .itemValuePath=${"id"}
               .itemLabelPath=${"name"}
@@ -122,7 +124,7 @@ export class FloorPlanEasyConfig extends LitElement {
 
   _edit() {
     this._hass.callService("browser_mod", "popup", {
-      title: "Floor Plan Editor",
+      title: localize("config.editor_popup_title", this._hass),
       content: {
         type: "custom:floor-plan-easy-editor",
         floor_id: this._config.floor_id,

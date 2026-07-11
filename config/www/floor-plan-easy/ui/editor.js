@@ -131,7 +131,7 @@ export class FloorPlanEasyEditor extends BaseApp {
     return `
     <ha-card>
         <div style="padding:16px; text-align:center; opacity:0.6;" class="window-title"></div>
-        ${this._toolbar.get_html_template()}
+        ${this._toolbar.get_html_template(this._hass)}
         <div class="floor-grid"></div>
     </ha-card>
     `;

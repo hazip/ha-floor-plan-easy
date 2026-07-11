@@ -1,5 +1,6 @@
 import { BACKGROUND_PATTERNS, patternsReady } from "../patterns.js";
 import { ensureStyles } from "../styles.js";
+import { localize } from "../i18n/index.js";
 
 function svgToDataUrl(svg) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -11,12 +12,12 @@ export class BackgroundSettingsDialog {
         this._editorState = editorState;
     }
 
-    async open() {
+    async open(hass) {
         // Ensure optional user patterns have been merged before building the grid.
         await patternsReady;
 
         const dialog = document.createElement("ha-dialog");
-        dialog.heading = "Background settings";
+        dialog.heading = localize("bg_dialog.heading", hass);
         dialog.open = true;
 
         ensureStyles(dialog);
@@ -41,7 +42,7 @@ export class BackgroundSettingsDialog {
         patternsWrap.style.gap = "8px";
 
         const patternsLabel = document.createElement("div");
-        patternsLabel.textContent = "Pattern";
+        patternsLabel.textContent = localize("common.pattern", hass);
         patternsLabel.style.opacity = "0.8";
         patternsLabel.style.fontSize = "12px";
 
@@ -60,7 +61,7 @@ export class BackgroundSettingsDialog {
             const tile = document.createElement("div");
             tile.className = "fp-pattern-tile fp-pattern-tile-none";
             tile.dataset.key = "";
-            tile.title = "None";
+            tile.title = localize("common.none", hass);
 
             const preview = document.createElement("div");
             preview.className = "fp-pattern-preview";
@@ -95,19 +96,19 @@ export class BackgroundSettingsDialog {
         patternsWrap.append(patternsLabel, grid);
 
         host.append(
-            this._labeledRow("FG color", fg),
-            this._labeledRow("BG color", bg),
+            this._labeledRow(localize("bg_dialog.fg_color", hass), fg),
+            this._labeledRow(localize("bg_dialog.bg_color", hass), bg),
             patternsWrap
         );
 
         const cancel = document.createElement("ha-button");
         cancel.slot = "secondaryAction";
-        cancel.textContent = "Cancel";
+        cancel.textContent = localize("common.cancel", hass);
         cancel.addEventListener("click", () => (dialog.open = false));
 
         const save = document.createElement("ha-button");
         save.slot = "primaryAction";
-        save.textContent = "Apply";
+        save.textContent = localize("common.apply", hass);
         save.addEventListener("click", () => {
             this._editorState.bg.fgColor = fg.value;
             this._editorState.bg.bgColor = bg.value;

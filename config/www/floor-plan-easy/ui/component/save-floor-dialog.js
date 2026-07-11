@@ -1,3 +1,4 @@
+import { localize } from "../i18n/index.js";
 
 function toFloorId(name) {
   const raw = (name || "").toLowerCase().trim();
@@ -26,7 +27,7 @@ export class SaveFloorDialog {
 
   async open(floor, hass) {
     const dialog = document.createElement("ha-dialog");
-    dialog.heading = "Save floorplan";
+    dialog.heading = localize("save_dialog.heading", hass);
     dialog.open = true;
 
     const host = document.createElement("div");
@@ -36,32 +37,32 @@ export class SaveFloorDialog {
     host.style.padding = "0 4px";
 
     const idField = document.createElement("ha-textfield");
-    idField.label = "Id";
+    idField.label = localize("save_dialog.id", hass);
     idField.value = floor.id || "unnamed";
-    idField.readOnly = true; 
-    idField.helper = "Generated from Name";
+    idField.readOnly = true;
+    idField.helper = localize("save_dialog.id_helper", hass);
     idField.persistentHelper = true;
 
     const nameField = document.createElement("ha-textfield");
-    nameField.label = "Name";
+    nameField.label = localize("save_dialog.name", hass);
     nameField.value = floor.name || floor.id;
 
     host.append(nameField, idField);
 
     const cancel = document.createElement("ha-button");
     cancel.slot = "secondaryAction";
-    cancel.textContent = "Cancel";
+    cancel.textContent = localize("common.cancel", hass);
     cancel.addEventListener("click", () => (dialog.open = false));
 
     const save = document.createElement("ha-button");
     save.slot = "primaryAction";
-    save.textContent = "Save";
+    save.textContent = localize("common.save", hass);
 
     nameField.addEventListener("input", (e) => {
       const name = e.target.value;
       const slug = toFloorId(name);
       idField.value = slug;
-      save.textContent = (name !== floor.name) ? "Save as" : "Save";
+      save.textContent = (name !== floor.name) ? localize("save_dialog.save_as", hass) : localize("common.save", hass);
       save.disabled = name.length === 0;
     });
 
@@ -92,7 +93,7 @@ export class SaveFloorDialog {
         dialog.open = false;
       } catch (err) {
         console.error(err);
-        idField.helper = "Failed to save. Please try again.";
+        idField.helper = localize("save_dialog.save_failed", hass);
         save.disabled = false;
       }
     });

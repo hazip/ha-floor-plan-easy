@@ -1,5 +1,6 @@
 
 import { TileContent } from "../../model/tile-content.js";
+import { localize } from "../i18n/index.js";
 
 async function ensureHaEntityPicker() {
   if (customElements.get("ha-entity-picker")) return;
@@ -30,7 +31,7 @@ export class TileEntityDialog {
     }
 
     const dialog = document.createElement("ha-dialog");
-    dialog.heading = `Edit tile content (${tile.col}, ${tile.row})`;
+    dialog.heading = localize("tile_dialog.heading", hass, { col: tile.col, row: tile.row });
     dialog.open = true;
     dialog.scrimClickAction = "";
     dialog.escapeKeyAction = "";
@@ -44,25 +45,25 @@ export class TileEntityDialog {
     const entityPicker = document.createElement("ha-entity-picker");
     entityPicker.hass = hass;
     entityPicker.value = buffer.entity;
-    entityPicker.label = "Entity";
+    entityPicker.label = localize("tile_dialog.entity", hass);
     entityPicker.allowCustomEntity = true;
     entityPicker.required = true;
 
     const actionSelect = document.createElement("ha-select");
-    actionSelect.label = "Tap action";
+    actionSelect.label = localize("tile_dialog.tap_action", hass);
     actionSelect.value = buffer.tapAction;
     actionSelect.fixedMenuPosition = true;
     // actionSelect.setAttribute("fixedMenuPosition", "");
     actionSelect.innerHTML = `
-      <ha-list-item value="none">Do nothing</ha-list-item>
-      <ha-list-item value="toggle">Toggle</ha-list-item>
-      <ha-list-item value="more-info">More info</ha-list-item>
+      <ha-list-item value="none">${localize("tile_dialog.action.none", hass)}</ha-list-item>
+      <ha-list-item value="toggle">${localize("tile_dialog.action.toggle", hass)}</ha-list-item>
+      <ha-list-item value="more-info">${localize("tile_dialog.action.more_info", hass)}</ha-list-item>
     `;
 
     const iconPicker = document.createElement("ha-icon-picker");
     iconPicker.hass = hass;
     iconPicker.value = buffer.icon;
-    iconPicker.label = "Icon";
+    iconPicker.label = localize("tile_dialog.icon", hass);
 
     const typeRow = document.createElement("div");
     typeRow.style.display = "flex";
@@ -70,7 +71,7 @@ export class TileEntityDialog {
     typeRow.style.gap = "12px";
 
     const typeLabel = document.createElement("div");
-    typeLabel.textContent = "Render as";
+    typeLabel.textContent = localize("tile_dialog.render_as", hass);
     typeLabel.style.minWidth = "110px";
     typeLabel.style.opacity = "0.8";
 
@@ -98,8 +99,8 @@ export class TileEntityDialog {
       return { wrap, input };
     };
 
-    const rIcon = mkRadio("icon", "Icon");
-    const rBadge = mkRadio("badge", "Badge");
+    const rIcon = mkRadio("icon", localize("tile_dialog.render.icon", hass));
+    const rBadge = mkRadio("badge", localize("tile_dialog.render.badge", hass));
     radios.append(rBadge.wrap, rIcon.wrap);
 
     typeRow.append(typeLabel, radios);
@@ -135,11 +136,11 @@ export class TileEntityDialog {
 
     const save = document.createElement("ha-button");
     save.slot = "primaryAction";
-    save.textContent = "Apply";
+    save.textContent = localize("common.apply", hass);
 
     const cancel = document.createElement("ha-button");
     cancel.slot = "secondaryAction";
-    cancel.textContent = "Cancel";
+    cancel.textContent = localize("common.cancel", hass);
     cancel.addEventListener("click", () => (dialog.open = false));
 
     dialog.append(content, save, cancel);

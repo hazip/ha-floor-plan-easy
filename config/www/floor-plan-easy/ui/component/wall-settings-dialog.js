@@ -1,5 +1,6 @@
 import { WALL_PATTERNS, patternsReady } from "../patterns.js";
 import { ensureStyles } from "../styles.js";
+import { localize } from "../i18n/index.js";
 
 function svgToDataUrl(svg) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -11,12 +12,12 @@ export class WallSettingsDialog {
         this._editorState = editorState;
     }
 
-    async open() {
+    async open(hass) {
         // Ensure optional user patterns have been merged before building the grid.
         await patternsReady;
 
         const dialog = document.createElement("ha-dialog");
-        dialog.heading = "Wall settings";
+        dialog.heading = localize("wall_dialog.heading", hass);
         dialog.open = true;
 
         ensureStyles(dialog);
@@ -38,7 +39,7 @@ export class WallSettingsDialog {
         patternsWrap.style.gap = "8px";
 
         const patternsLabel = document.createElement("div");
-        patternsLabel.textContent = "Pattern";
+        patternsLabel.textContent = localize("common.pattern", hass);
         patternsLabel.style.opacity = "0.8";
         patternsLabel.style.fontSize = "12px";
 
@@ -75,18 +76,18 @@ export class WallSettingsDialog {
         patternsWrap.append(patternsLabel, grid);
 
         host.append(
-            this._labeledRow("Wall color", fg),
+            this._labeledRow(localize("wall_dialog.color", hass), fg),
             patternsWrap
         );
 
         const cancel = document.createElement("ha-button");
         cancel.slot = "secondaryAction";
-        cancel.textContent = "Cancel";
+        cancel.textContent = localize("common.cancel", hass);
         cancel.addEventListener("click", () => (dialog.open = false));
 
         const save = document.createElement("ha-button");
         save.slot = "primaryAction";
-        save.textContent = "Apply";
+        save.textContent = localize("common.apply", hass);
         save.addEventListener("click", () => {
             this._editorState.wall.fgColor = fg.value;
             dialog.open = false;

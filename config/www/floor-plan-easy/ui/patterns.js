@@ -37,11 +37,30 @@ const USER_PATTERNS_URL = "/local/floor-plan-easy-user-patterns.js";
 // merged result must be complete — e.g. before building a pattern picker. It
 // never rejects: a missing user file is the normal case.
 export const patternsReady = (async () => {
+    // Probe first so we can tell the two cases apart: a dynamic import() failure
+    // alone cannot distinguish "file absent" (the normal case) from "file exists
+    // but is broken" (a user mistake worth surfacing).
+    let exists = false;
+    try {
+        const res = await fetch(USER_PATTERNS_URL, { method: "HEAD" });
+        exists = res.ok;
+    } catch (e) {
+        // Network error reaching the server — treat as absent.
+    }
+
+    if (!exists) {
+        // Expected when the user has not created the optional file.
+        console.info(`floor_plan_easy: no user pattern file at ${USER_PATTERNS_URL} (optional).`);
+        return;
+    }
+
     let mod;
     try {
         mod = await import(USER_PATTERNS_URL);
     } catch (e) {
-        // No user file present (404) is expected — stay silent.
+        // The file is present but failed to load/parse — surface it so the user
+        // can fix the syntax error instead of silently getting no patterns.
+        console.warn(`floor_plan_easy: user pattern file at ${USER_PATTERNS_URL} exists but could not be loaded — check it for syntax errors.`, e);
         return;
     }
     try {

@@ -1,6 +1,7 @@
 import { Floor } from "../model/floor.js";
 import { FloorRenderer } from "./floor-renderer.js";
 import { ensureStyles } from "./styles.js";
+import { localize } from "./i18n/index.js";
 
 export class BaseApp extends HTMLElement {
 
@@ -102,7 +103,7 @@ export class BaseApp extends HTMLElement {
     const title = this.querySelector(".window-title");
 
     if (title) {
-      title.textContent = (this.floor?.name ?? "EMPTY PROJECT") + " - FloorPlan Easy";
+      title.textContent = (this.floor?.name ?? localize("app.empty_project", this._hass)) + " - FloorPlan Easy";
     }
   }
 
