@@ -1,4 +1,4 @@
-import { WALL_PATTERNS } from "../patterns.js";
+import { WALL_PATTERNS, patternsReady } from "../patterns.js";
 import { ensureStyles } from "../styles.js";
 
 function svgToDataUrl(svg) {
@@ -12,6 +12,9 @@ export class WallSettingsDialog {
     }
 
     async open() {
+        // Ensure optional user patterns have been merged before building the grid.
+        await patternsReady;
+
         const dialog = document.createElement("ha-dialog");
         dialog.heading = "Wall settings";
         dialog.open = true;

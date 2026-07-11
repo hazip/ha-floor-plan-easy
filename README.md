@@ -147,6 +147,61 @@ Tiles bound to an entity support a tap action:
 
 ---
 
+## Custom patterns (backgrounds & walls)
+
+The editor's background and wall pickers are populated from a built-in pattern
+library. You can **add your own patterns** — or override the built-in ones —
+without editing the card's files, so your customizations survive card updates.
+
+### How it works
+
+On startup the card looks for an optional file at:
+
+```
+config/www/floor-plan-easy-user-patterns.js
+```
+
+(served at `/local/floor-plan-easy-user-patterns.js`). If present, its patterns
+are merged on top of the built-ins. This file lives **outside** the
+`floor-plan-easy/` folder on purpose: replacing that folder when you update the
+card never touches your patterns.
+
+### Steps
+
+1. In your `www` folder, copy the bundled template
+   [`floor-plan-easy-user-patterns.example.js`](config/www/floor-plan-easy-user-patterns.example.js)
+   to a new file **without** the `.example` part:
+
+   ```
+   config/www/floor-plan-easy-user-patterns.js
+   ```
+
+2. Edit it. It exports two objects, `BACKGROUND_PATTERNS` and `WALL_PATTERNS`
+   (you may include just one). Each entry is a name mapped to an SVG string:
+
+   ```js
+   export const BACKGROUND_PATTERNS = {
+     "dots": `
+       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+         <circle cx="25" cy="25" r="6" fill="currentColor"/>
+         <circle cx="75" cy="75" r="6" fill="currentColor"/>
+       </svg>`.trim(),
+   };
+   ```
+
+3. Hard-refresh your dashboard (`Cmd/Ctrl + Shift + R`). The new patterns appear
+   in the editor's background/wall settings dialogs.
+
+### Rules
+
+- Use `viewBox="0 0 100 100"` for each SVG.
+- Use `stroke="currentColor"` and/or `fill="currentColor"` so the color chosen
+  in the editor is applied at render time. Hard-coded colors ignore the pickers.
+- A key matching a **built-in name overrides** that built-in; a **new key adds**
+  a pattern. Omitted patterns keep their built-in value.
+
+---
+
 ## Troubleshooting
 
 - **Card missing from the picker:** the frontend JS failed to load or is

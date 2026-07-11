@@ -26,6 +26,7 @@ config/custom_components/*
 config/www/*
 !config/www/floor-plan-easy/**
 !config/www/floor-plan-easy/
+!config/www/floor-plan-easy-user-patterns.example.js
 
 # Python compiled files
 **/__pycache__/

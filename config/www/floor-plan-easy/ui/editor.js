@@ -1,10 +1,12 @@
 import { BaseApp } from "./base-app.js";
+import { Floor } from "../model/floor.js";
 import { Tile } from "../model/tile.js";
 import { TileBackground } from "../model/tile-background.js";
 import { TileWall } from "../model/tile-wall.js";
 import { BACKGROUND_PATTERNS, WALL_PATTERNS } from "./patterns.js";
 import { Toolbar } from "./component/toolbar.js";
 import { TileEntityDialog } from "./component/tile-entity-dialog.js";
+import { DraftStore } from "../storage/draft-store.js";
 
 export class FloorPlanEasyEditor extends BaseApp {
 
@@ -14,8 +16,37 @@ export class FloorPlanEasyEditor extends BaseApp {
     this._toolbar = new Toolbar(this)
     this._tileEntityDialog = new TileEntityDialog();
 
-    // Start from an empty floor; if a floor_id is configured (e.g. opened from
-    // the viewer card's "Open editor" button) it is loaded once hass is ready.
+    // Serialized form of the last draft written to storage; used to skip
+    // redundant writes on passive re-renders (e.g. every hass state tick).
+    this._lastSavedDraftJSON = null;
+
+    this._restoreInitialFloor();
+  }
+
+  // Recover the working floor after the element is (re)created. Home Assistant
+  // rebuilds Lovelace cards after long idle periods / websocket reconnects,
+  // which re-runs this constructor and would otherwise wipe the in-memory floor.
+  _restoreInitialFloor() {
+    const draft = DraftStore.loadDraft();
+    if (draft) {
+      try {
+        this.floor = new Floor(draft);
+        this._lastSavedDraftJSON = JSON.stringify(this.floor.toJSON());
+        // Remember which floor the draft belongs to so a configured floor_id
+        // for the same id does not clobber unsaved edits (see below).
+        this._restoredDraftId = this.floor.id;
+        this.updateWindowTitle();
+        this._renderFloor();
+        return;
+      } catch (e) {
+        console.warn("floor_plan_easy: could not restore draft, discarding", e);
+        DraftStore.clearDraft();
+      }
+    }
+
+    // No usable draft: start empty, but once hass is ready try to re-fetch the
+    // last floor that was loaded from the server (fallback recovery).
+    this._pendingLastFloorRestore = true;
     this.newFloor();
   }
 
@@ -27,6 +58,7 @@ export class FloorPlanEasyEditor extends BaseApp {
   set hass(hass) {
     this._hass = hass;
     this._maybeLoadConfiguredFloor();
+    this._maybeRestoreLastFloor();
     this._queueRender();
   }
 
@@ -35,8 +67,60 @@ export class FloorPlanEasyEditor extends BaseApp {
     if (!this._hass || !floorId) return;
     if (floorId === this._loadedFloorId) return;
 
+    // A restored draft for this same floor may hold unsaved edits — keep it
+    // instead of overwriting with the server copy.
+    if (floorId === this._restoredDraftId) {
+      this._loadedFloorId = floorId;
+      this._restoredDraftId = null;
+      this._pendingLastFloorRestore = false;
+      return;
+    }
+
     this._loadedFloorId = floorId;
     this.loadFloor(floorId);
+  }
+
+  // Fallback used only when no draft could be restored and no floor_id is
+  // configured: re-fetch a clean copy of the last floor loaded from the server.
+  _maybeRestoreLastFloor() {
+    if (!this._pendingLastFloorRestore || !this._hass) return;
+    this._pendingLastFloorRestore = false;
+
+    if (this.config?.floor_id) return; // configured floor takes precedence
+
+    const lastId = DraftStore.loadLastFloorId();
+    if (lastId) this.loadFloor(lastId);
+  }
+
+  // Every mutation funnels through _renderFloor(), so persist the working floor
+  // here. Redundant writes on passive renders are skipped via a content compare.
+  _renderFloor() {
+    super._renderFloor();
+    this._persistDraft();
+  }
+
+  _persistDraft() {
+    if (!this.floor) return;
+
+    let json;
+    try {
+      json = JSON.stringify(this.floor.toJSON());
+    } catch (e) {
+      return;
+    }
+
+    if (json === this._lastSavedDraftJSON) return;
+    this._lastSavedDraftJSON = json;
+    DraftStore.saveDraft(json);
+  }
+
+  async loadFloor(floor_id) {
+    await super.loadFloor(floor_id);
+    // A real floor is now loaded, so no fallback restore is needed and the
+    // draft (persisted via _renderFloor) reflects this floor.
+    this._pendingLastFloorRestore = false;
+    this._restoredDraftId = null;
+    DraftStore.saveLastFloorId(floor_id);
   }
 
   _getMode() {
