@@ -12,6 +12,8 @@ export default {
   "common.pattern": "Minta",
   "common.floor": "Szint",
   "common.documentation": "dokumentációt",
+  "common.save_color": "Szín mentése",
+  "common.remove_color": "Szín eltávolítása",
 
   // Konfigurációs panel (kártyaszerkesztő)
   "config.loading_hass": "hass betöltése…",

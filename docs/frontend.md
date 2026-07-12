@@ -36,6 +36,7 @@ model/                      plain data classes (no DOM)
   editor-state.js           EditorState + EditorMode: active tool + tool settings
 storage/
   draft-store.js            DraftStore: localStorage persistence of editor work
+  swatch-store.js           SwatchStore: localStorage palette of saved colors
 ui/
   base-app.js               BaseApp: shared card lifecycle + render loop
   card.js                   FloorPlanEasyCard: read-only viewer
@@ -166,8 +167,16 @@ Extends `BaseApp` and adds the toolbar and editing interactions.
   editor-state slice, heading, color rows, whether a "None" tile is shown). They
   take an `onApply` callback; applying settings switches `activeMode` to that
   tool's "set" mode so the user can immediately paint with the chosen settings.
-  The dialogs render with a transparent scrim (`--mdc-dialog-scrim-color`) so the
-  color-picker eyedropper can sample colors from the floor plan behind them.
+  The dialog is widened (`--mdc-dialog-min-width: 380px`) so the pattern grid
+  (`.fp-pattern-grid`, `auto-fill` of 56px tiles) fits five tiles per row.
+- **Saved-color palette.** Each color row is built by `_colorField`: label +
+  `<input type="color">` + a "＋" save button, with a strip of saved-color
+  swatches beneath it. The palette is a single list shared across every color
+  input (and every dialog), persisted by `SwatchStore` in `localStorage`
+  (most-recent-first, deduped, capped at 24). Clicking a swatch loads its color
+  into that row's input; ＋ saves the input's current value; a swatch is removed
+  via its hover `×` (desktop) or a 500 ms long-press (touch). A shared
+  `refreshSwatches()` re-renders all strips whenever the palette changes.
 - **Grid resize.** The add-row / add-column actions live in a "+" dropdown
   (`.tool-dropdown-menu`) that toggles open on click and dismisses on outside
   click (the outside-click listener is attached only while the menu is open, so

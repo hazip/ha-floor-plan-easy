@@ -1,6 +1,7 @@
 import { patternsReady } from "../patterns.js";
 import { ensureStyles } from "../styles.js";
 import { localize } from "../i18n/index.js";
+import { SwatchStore } from "../../storage/swatch-store.js";
 
 function svgToDataUrl(svg) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -35,9 +36,9 @@ export class PatternSettingsDialog {
         const dialog = document.createElement("ha-dialog");
         dialog.heading = localize(headingKey, hass);
         dialog.open = true;
-        // Keep the backdrop transparent so the color-picker eyedropper can
-        // sample colors from the floor plan behind the dialog.
-        dialog.style.setProperty("--mdc-dialog-scrim-color", "transparent");
+        // Widen the dialog so the pattern grid fits 5 tiles per row
+        // (5×56px + 4×10px gap = 320px grid + host/dialog padding).
+        dialog.style.setProperty("--mdc-dialog-min-width", "380px");
 
         ensureStyles(dialog);
 
@@ -113,10 +114,22 @@ export class PatternSettingsDialog {
 
         patternsWrap.append(patternsLabel, grid);
 
+        // Saved-color palette shared across every color input in the dialog.
+        // Each field renders its own strip; when the palette changes (a color is
+        // saved or removed) every strip re-renders so they stay in sync.
+        const renderStrips = [];
+        const refreshSwatches = () => {
+            const colors = SwatchStore.load();
+            renderStrips.forEach((fn) => fn(colors));
+        };
+
         host.append(
-            ...colorInputs.map(({ input, labelKey }) => this._labeledRow(localize(labelKey, hass), input)),
+            ...colorInputs.map(({ input, labelKey }) =>
+                this._colorField(localize(labelKey, hass), input, hass, renderStrips, refreshSwatches)
+            ),
             patternsWrap
         );
+        refreshSwatches();
 
         const cancel = document.createElement("ha-button");
         cancel.slot = "secondaryAction";
@@ -155,5 +168,87 @@ export class PatternSettingsDialog {
 
         row.append(l, el);
         return row;
+    }
+
+    // A color row (label + <input type=color> + "save" button) plus a strip of
+    // saved-color swatches beneath it. Clicking a swatch loads that color into
+    // this field's input; the save button stores the input's current value; a
+    // swatch's × removes it from the shared palette. `renderStrips` collects a
+    // re-render callback so a change made in one field updates every strip.
+    _colorField(label, input, hass, renderStrips, refreshSwatches) {
+        const field = document.createElement("div");
+        field.className = "fp-color-field";
+
+        const save = document.createElement("button");
+        save.type = "button";
+        save.className = "tool-btn fp-swatch-save";
+        save.textContent = "＋";
+        save.title = localize("common.save_color", hass);
+        save.addEventListener("click", () => {
+            SwatchStore.add(input.value);
+            refreshSwatches();
+        });
+
+        const row = this._labeledRow(label, input);
+        row.append(save);
+
+        const strip = document.createElement("div");
+        strip.className = "fp-swatch-strip";
+
+        const renderStrip = (colors) => {
+            strip.textContent = "";
+            colors.forEach((color) => {
+                const sw = document.createElement("button");
+                sw.type = "button";
+                sw.className = "fp-swatch";
+                sw.style.background = color;
+                sw.title = color;
+
+                const remove = () => {
+                    SwatchStore.remove(color);
+                    refreshSwatches();
+                };
+
+                // Long-press removes on touch (where the hover × never shows).
+                // A completed long-press suppresses the trailing click so the
+                // color is not re-selected into the input on release.
+                let pressTimer = null;
+                let longPressed = false;
+                const cancelPress = () => {
+                    if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; }
+                };
+                sw.addEventListener("pointerdown", () => {
+                    longPressed = false;
+                    pressTimer = setTimeout(() => {
+                        pressTimer = null;
+                        longPressed = true;
+                        remove();
+                    }, 500);
+                });
+                sw.addEventListener("pointerup", cancelPress);
+                sw.addEventListener("pointerleave", cancelPress);
+                sw.addEventListener("pointercancel", cancelPress);
+                sw.addEventListener("click", () => {
+                    if (longPressed) { longPressed = false; return; }
+                    input.value = color;
+                });
+
+                const del = document.createElement("span");
+                del.className = "fp-swatch-remove";
+                del.textContent = "×";
+                del.title = localize("common.remove_color", hass);
+                del.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    remove();
+                });
+
+                sw.appendChild(del);
+                strip.appendChild(sw);
+            });
+        };
+        renderStrips.push(renderStrip);
+
+        field.append(row, strip);
+        return field;
     }
 }

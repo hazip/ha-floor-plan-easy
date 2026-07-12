@@ -14,6 +14,8 @@ export default {
   "common.pattern": "Pattern",
   "common.floor": "Floor",
   "common.documentation": "documentation",
+  "common.save_color": "Save this color",
+  "common.remove_color": "Remove color",
 
   // Config panel (card editor)
   "config.loading_hass": "Loading hass…",

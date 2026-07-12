@@ -277,6 +277,59 @@ export function ensureStyles(hostEl) {
       justify-content:center;
     }
 
+    /* Saved-color palette (swatches) under each color picker. */
+    .fp-color-field{
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Reuses .tool-btn for the button chrome; only the compact size differs. */
+    .fp-swatch-save{
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .fp-swatch-strip{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-left: 122px;   /* align under the input, past the 110px label + gap */
+    }
+
+    .fp-swatch{
+      position: relative;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 1px solid var(--divider-color, rgba(0,0,0,0.25));
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .fp-swatch-remove{
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--card-background-color, #fff);
+      border: 1px solid rgba(0,0,0,0.3);
+      color: var(--primary-text-color);
+      font-size: 11px;
+      line-height: 12px;
+      text-align: center;
+      display: none;
+    }
+
+    .fp-swatch:hover .fp-swatch-remove{
+      display: block;
+    }
+
     /* MODAL — currently unused (dialogs use <ha-dialog>); kept for reference. */
 
     .fp-overlay {
