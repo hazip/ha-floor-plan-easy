@@ -202,6 +202,14 @@ export function ensureStyles(hostEl) {
       box-shadow: var(--ha-card-box-shadow, 0 2px 12px rgba(0,0,0,0.25));
     }
 
+    /* Right-aligned by default (menu opens toward the toolbar's left edge).
+       Dropdowns near the left of the toolbar align left so the menu does not
+       overflow off-canvas. */
+    .tool-dropdown-menu.align-left{
+      left: 0;
+      right: auto;
+    }
+
     .tool-dropdown-menu[hidden]{
       display: none;
     }

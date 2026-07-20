@@ -4,6 +4,7 @@ import { WallSettingsDialog } from "./wall-settings-dialog.js"
 import { ObjectSettingsDialog } from "./object-settings-dialog.js"
 import { SaveFloorDialog } from "./save-floor-dialog.js"
 import { LoadFloorDialog } from "./load-floor-dialog.js"
+import { serializeFloorExport, parseFloorExport } from "../../storage/floor-file.js";
 import { localize } from "../i18n/index.js";
 
 export class Toolbar {
@@ -29,13 +30,43 @@ export class Toolbar {
             <ha-icon icon="mdi:file-outline"></ha-icon>
           </button>
 
-          <button class="tool-btn" data-action="file-save" title="${t("toolbar.file.save")}">
-            <ha-icon icon="mdi:content-save-outline"></ha-icon>
-          </button>
+          <!-- Save: primary saves to Home Assistant; chevron reveals JSON download. -->
+          <div class="tool-dropdown">
+            <div class="tool-group split">
+              <button class="tool-btn" data-action="file-save" title="${t("toolbar.file.save")}">
+                <ha-icon icon="mdi:content-save-outline"></ha-icon>
+              </button>
+              <button class="tool-btn tool-menu" data-action="file-save-menu" title="${t("toolbar.file.more_save")}" aria-haspopup="true" aria-expanded="false">
+                <ha-icon icon="mdi:chevron-down"></ha-icon>
+              </button>
+            </div>
 
-          <button class="tool-btn" data-action="file-load" title="${t("toolbar.file.load")}">
-            <ha-icon icon="mdi:folder-open-outline"></ha-icon>
-          </button>
+            <div class="tool-dropdown-menu align-left" hidden>
+              <button class="tool-dropdown-item" data-action="file-download">
+                <ha-icon icon="mdi:download-outline"></ha-icon>
+                <span>${t("toolbar.file.download")}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Open: primary loads from Home Assistant; chevron reveals JSON upload. -->
+          <div class="tool-dropdown">
+            <div class="tool-group split">
+              <button class="tool-btn" data-action="file-load" title="${t("toolbar.file.load")}">
+                <ha-icon icon="mdi:folder-open-outline"></ha-icon>
+              </button>
+              <button class="tool-btn tool-menu" data-action="file-load-menu" title="${t("toolbar.file.more_open")}" aria-haspopup="true" aria-expanded="false">
+                <ha-icon icon="mdi:chevron-down"></ha-icon>
+              </button>
+            </div>
+
+            <div class="tool-dropdown-menu align-left" hidden>
+              <button class="tool-dropdown-item" data-action="file-upload">
+                <ha-icon icon="mdi:upload-outline"></ha-icon>
+                <span>${t("toolbar.file.upload")}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="tool-separator"></div>
@@ -192,6 +223,7 @@ export class Toolbar {
       ?.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        this._closeDropdowns();
         await this._saveFloorDialog.open(this.root.floor, this.root._hass);
       });
 
@@ -199,48 +231,33 @@ export class Toolbar {
       ?.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        this._closeDropdowns();
         await this._loadFloorDialog.open(this.root._hass);
       });
 
-    // Grid-resize actions live in a "+" dropdown to keep the toolbar compact.
-    const addMenuBtn = this.root.querySelector('[data-action="grid-add-menu"]');
-    const addMenu = this.root.querySelector(".tool-dropdown-menu");
+    this.root.querySelector('[data-action="file-download"]')
+      ?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._closeDropdowns();
+        this._downloadFloor(this.root.floor);
+      });
 
-    // Dismiss the menu on any click outside of it. This listener is attached
-    // only while the menu is open (and removed on close), so it never outlives
-    // the toolbar — attaching it permanently to `document` would leak one stale
-    // listener per card re-creation (HA rebuilds the card on reconnect).
-    const onOutsideClick = (e) => {
-      const path = e.composedPath();
-      if (path.includes(addMenuBtn) || path.includes(addMenu)) return;
-      closeAddMenu();
-    };
+    this.root.querySelector('[data-action="file-upload"]')
+      ?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this._closeDropdowns();
+        this._uploadFloor(this.root._hass);
+      });
 
-    const closeAddMenu = () => {
-      if (!addMenu || addMenu.hidden) return;
-      addMenu.hidden = true;
-      addMenuBtn?.setAttribute("aria-expanded", "false");
-      document.removeEventListener("click", onOutsideClick);
-    };
-
-    const openAddMenu = () => {
-      if (!addMenu || !addMenu.hidden) return;
-      addMenu.hidden = false;
-      addMenuBtn?.setAttribute("aria-expanded", "true");
-      document.addEventListener("click", onOutsideClick);
-    };
-
-    addMenuBtn?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      addMenu.hidden ? openAddMenu() : closeAddMenu();
-    });
+    this.setupDropdowns();
 
     const on = (sel, fn) => this.root.querySelector(sel)?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       fn();
-      closeAddMenu();
+      this._closeDropdowns();
     });
 
     on('[data-action="grid-add-col-left"]',  () => this.root.addTiles("LEFT"));
@@ -249,6 +266,95 @@ export class Toolbar {
     on('[data-action="grid-add-row-bottom"]',() => this.root.addTiles("BOTTOM"));
 
     this.updateToolbarActiveState();
+  }
+
+  // Wire every `.tool-dropdown` (grid-resize "+", save, open) to a single
+  // controller so at most one menu is open at a time. The outside-click
+  // listener is attached only while a menu is open and removed on close, so it
+  // never outlives the toolbar — attaching it permanently to `document` would
+  // leak one stale listener per card re-creation (HA rebuilds cards on
+  // reconnect).
+  setupDropdowns() {
+    let openEntry = null;
+
+    const onOutsideClick = (e) => {
+      if (!openEntry) return;
+      if (e.composedPath().includes(openEntry.dropdown)) return;
+      closeOpen();
+    };
+
+    const closeOpen = () => {
+      if (!openEntry) return;
+      openEntry.menu.hidden = true;
+      openEntry.trigger.setAttribute("aria-expanded", "false");
+      openEntry = null;
+      document.removeEventListener("click", onOutsideClick);
+    };
+
+    const open = (entry) => {
+      closeOpen();
+      entry.menu.hidden = false;
+      entry.trigger.setAttribute("aria-expanded", "true");
+      openEntry = entry;
+      document.addEventListener("click", onOutsideClick);
+    };
+
+    // Expose the closer so item handlers can dismiss the active menu.
+    this._closeDropdowns = closeOpen;
+
+    this.root.querySelectorAll(".tool-dropdown").forEach((dropdown) => {
+      const trigger = dropdown.querySelector('[aria-haspopup="true"]');
+      const menu = dropdown.querySelector(".tool-dropdown-menu");
+      if (!trigger || !menu) return;
+
+      const entry = { dropdown, trigger, menu };
+      trigger.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        menu.hidden ? open(entry) : closeOpen();
+      });
+    });
+  }
+
+  _downloadFloor(floor) {
+    if (!floor) return;
+
+    const text = serializeFloorExport(floor.toJSON(), { exportedAt: new Date().toISOString() });
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${floor.id || "floorplan"}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
+  _uploadFloor(hass) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.style.display = "none";
+
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+
+      try {
+        const data = parseFloorExport(await file.text());
+        this.root.importFloor(data);
+      } catch (err) {
+        console.error("floor_plan_easy: import failed", err);
+        alert(localize("toolbar.file.upload_failed", hass));
+      }
+    });
+
+    document.body.appendChild(input);
+    input.click();
   }
 
   updateToolbarActiveState() {

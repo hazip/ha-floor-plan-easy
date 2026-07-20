@@ -115,6 +115,19 @@ export class FloorPlanEasyEditor extends BaseApp {
     DraftStore.saveDraft(json);
   }
 
+  importFloor(data) {
+    // super.importFloor() constructs a Floor and may throw on malformed data;
+    // clear the fallback-restore guards only after it succeeds, so a rejected
+    // import leaves the recovery state untouched. Once imported, this is the
+    // working floor: cancel any pending fallback restore and drop the "keep the
+    // restored draft" guard — otherwise a later hass tick could clobber it. The
+    // import is persisted as the draft via _renderFloor() -> _persistDraft().
+    super.importFloor(data);
+
+    this._pendingLastFloorRestore = false;
+    this._restoredDraftId = null;
+  }
+
   async loadFloor(floor_id) {
     await super.loadFloor(floor_id);
     // A real floor is now loaded, so no fallback restore is needed and the

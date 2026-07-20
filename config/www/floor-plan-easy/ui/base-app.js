@@ -141,6 +141,17 @@ export class BaseApp extends HTMLElement {
     this._renderFloor();
   }
 
+  // Replace the working floor with an in-memory floor definition (e.g. one
+  // read from an uploaded .json file). Unlike loadFloor() this does not touch
+  // the backend; the caller decides whether/when to persist it.
+  importFloor(data) {
+    this.floor = new Floor(data);
+
+    this.updateWindowTitle();
+
+    this._renderFloor();
+  }
+
   async loadFloor(floor_id) {
     const resp = await this._hass.callWS({
       type: "floor_plan_easy/get_floor",
