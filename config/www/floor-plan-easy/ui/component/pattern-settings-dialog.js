@@ -7,6 +7,15 @@ function svgToDataUrl(svg) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
+// Human-friendly tile tooltip. A pattern gets a localized name when the i18n
+// dict defines `pattern.<key>`; otherwise we fall back to the raw registry key
+// (which is also what localize() returns for an unknown key, minus the prefix).
+function patternLabel(key, hass) {
+  const dictKey = `pattern.${key}`;
+  const label = localize(dictKey, hass);
+  return label === dictKey ? key : label;
+}
+
 // Shared "pick a color + a pattern" settings dialog. Subclasses provide a
 // `_config(hass)` describing the registry, the editor-state slice they edit,
 // the heading and the color row(s). The background variant additionally uses two
@@ -31,7 +40,7 @@ export class PatternSettingsDialog {
         // Ensure optional user patterns have been merged before building the grid.
         await patternsReady;
 
-        const { patterns, state, headingKey, colorRows, includeNone } = this._config(hass);
+        const { patterns, groups, state, headingKey, colorRows, includeNone } = this._config(hass);
 
         const dialog = document.createElement("ha-dialog");
         dialog.heading = localize(headingKey, hass);
@@ -65,17 +74,48 @@ export class PatternSettingsDialog {
         patternsLabel.style.opacity = "0.8";
         patternsLabel.style.fontSize = "12px";
 
-        const grid = document.createElement("div");
-        grid.className = "fp-pattern-grid";
-
+        // Active-state highlight spans every group's grid, so query the whole
+        // wrapper rather than a single grid.
         const setActive = (key) => {
             state.patternKey = key;
-            grid.querySelectorAll(".fp-pattern-tile").forEach((t) => {
+            patternsWrap.querySelectorAll(".fp-pattern-tile").forEach((t) => {
                 t.classList.toggle("active", t.dataset.key === key);
             });
         };
 
-        // "None" tile (background only).
+        const makeTile = (key, svg) => {
+            const tile = document.createElement("div");
+            tile.className = "fp-pattern-tile";
+            tile.dataset.key = key;
+            tile.title = patternLabel(key, hass);
+
+            const preview = document.createElement("div");
+            preview.className = "fp-pattern-preview";
+            preview.style.backgroundImage = svgToDataUrl(svg);
+
+            tile.appendChild(preview);
+            tile.addEventListener("click", () => setActive(key));
+            return tile;
+        };
+
+        // A tile grid, optionally preceded by a group heading. `heading` is null
+        // for the leading (None) row; empty groups are skipped by the caller.
+        const appendGrid = (heading, tiles) => {
+            if (heading) {
+                const label = document.createElement("div");
+                label.className = "fp-pattern-group-label";
+                label.textContent = heading;
+                patternsWrap.appendChild(label);
+            }
+            const grid = document.createElement("div");
+            grid.className = "fp-pattern-grid";
+            tiles.forEach((t) => grid.appendChild(t));
+            patternsWrap.appendChild(grid);
+        };
+
+        patternsWrap.appendChild(patternsLabel);
+
+        // "None" tile (background only) — its own leading row, no heading.
         if (includeNone) {
             const tile = document.createElement("div");
             tile.className = "fp-pattern-tile fp-pattern-tile-none";
@@ -90,29 +130,30 @@ export class PatternSettingsDialog {
 
             tile.appendChild(preview);
             tile.addEventListener("click", () => setActive(""));
-            grid.appendChild(tile);
+            appendGrid(null, [tile]);
         }
 
-        // Pattern tiles
-        Object.entries(patterns).forEach(([key, svg]) => {
-            const tile = document.createElement("div");
-            tile.className = "fp-pattern-tile";
-            tile.dataset.key = key;
-            tile.title = key;
-
-            const preview = document.createElement("div");
-            preview.className = "fp-pattern-preview";
-            preview.style.backgroundImage = svgToDataUrl(svg);
-
-            tile.appendChild(preview);
-            tile.addEventListener("click", () => setActive(key));
-            grid.appendChild(tile);
+        // One labeled section per group, in the configured order. A key may be
+        // listed by only one group; whatever a group names and the registry
+        // actually has is rendered, in the group's listed order.
+        const rendered = new Set();
+        (groups || []).forEach((group) => {
+            const tiles = group.keys
+                .filter((key) => key in patterns && !rendered.has(key))
+                .map((key) => { rendered.add(key); return makeTile(key, patterns[key]); });
+            if (tiles.length) appendGrid(localize(group.labelKey, hass), tiles);
         });
+
+        // Anything not claimed by a group (e.g. a user-added pattern). With no
+        // groups configured this is simply every pattern, under no heading.
+        const leftover = Object.entries(patterns).filter(([key]) => !rendered.has(key));
+        if (leftover.length) {
+            const tiles = leftover.map(([key, svg]) => makeTile(key, svg));
+            appendGrid((groups && groups.length) ? localize("group.other", hass) : null, tiles);
+        }
 
         // init active
         setActive(includeNone ? (state.patternKey || "") : state.patternKey);
-
-        patternsWrap.append(patternsLabel, grid);
 
         // Saved-color palette shared across every color input in the dialog.
         // Each field renders its own strip; when the palette changes (a color is

@@ -236,6 +236,14 @@ export function ensureStyles(hostEl) {
       justify-content: start;
     }
 
+    /* Section heading above each group of pattern tiles. */
+    .fp-pattern-group-label{
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+
     .fp-pattern-tile{
       width: 56px;
       height: 56px;

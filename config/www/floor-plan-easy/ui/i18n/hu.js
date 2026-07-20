@@ -3,6 +3,18 @@ export default {
   // Alkalmazás / ablakcím
   "app.empty_project": "ÜRES PROJEKT",
 
+  // Mintaválasztó csoportcímek
+  "group.other": "Egyéb",
+  "group.bg.indoor": "Beltér",
+  "group.bg.outdoor": "Kültér",
+  "group.wall.wall": "Fal",
+  "group.wall.opening": "Falnyílás",
+  "group.object.doors_inner": "Ajtók falon belül",
+  "group.object.doors_outer": "Ajtók falon kívül",
+  "group.object.windows": "Ablakok",
+  "group.object.furniture": "Berendezési tárgyak",
+  "group.object.stairs": "Lépcsők",
+
   // Több helyen közös
   "common.cancel": "Mégse",
   "common.apply": "Alkalmaz",
@@ -60,6 +72,17 @@ export default {
   // Falbeállítások párbeszédablak
   "wall_dialog.heading": "Falbeállítások",
   "wall_dialog.color": "Fal színe",
+
+  // Falminták nevei (csempe tooltip). A nyílásokat csak a szélességük nevezi
+  // meg — nincs ajtó/ablak szöveg.
+  "pattern.opening-narrow-top": "Szűk nyílás (fent)",
+  "pattern.opening-narrow-right": "Szűk nyílás (jobb)",
+  "pattern.opening-narrow-bottom": "Szűk nyílás (lent)",
+  "pattern.opening-narrow-left": "Szűk nyílás (bal)",
+  "pattern.opening-wide-top": "Széles nyílás (fent)",
+  "pattern.opening-wide-right": "Széles nyílás (jobb)",
+  "pattern.opening-wide-bottom": "Széles nyílás (lent)",
+  "pattern.opening-wide-left": "Széles nyílás (bal)",
 
   // Objektumbeállítások párbeszédablak
   "object_dialog.heading": "Objektumbeállítások",

@@ -5,6 +5,18 @@ export default {
   // App / window title
   "app.empty_project": "EMPTY PROJECT",
 
+  // Pattern picker group headings
+  "group.other": "Other",
+  "group.bg.indoor": "Indoor",
+  "group.bg.outdoor": "Outdoor",
+  "group.wall.wall": "Wall",
+  "group.wall.opening": "Wall opening",
+  "group.object.doors_inner": "Doors (inside wall)",
+  "group.object.doors_outer": "Doors (outside wall)",
+  "group.object.windows": "Windows",
+  "group.object.furniture": "Furnishings",
+  "group.object.stairs": "Stairs",
+
   // Shared across multiple places
   "common.cancel": "Cancel",
   "common.apply": "Apply",
@@ -62,6 +74,17 @@ export default {
   // Wall settings dialog
   "wall_dialog.heading": "Wall settings",
   "wall_dialog.color": "Wall color",
+
+  // Wall pattern names (tile tooltips). Openings are named by width only —
+  // no door/window wording.
+  "pattern.opening-narrow-top": "Narrow opening (top)",
+  "pattern.opening-narrow-right": "Narrow opening (right)",
+  "pattern.opening-narrow-bottom": "Narrow opening (bottom)",
+  "pattern.opening-narrow-left": "Narrow opening (left)",
+  "pattern.opening-wide-top": "Wide opening (top)",
+  "pattern.opening-wide-right": "Wide opening (right)",
+  "pattern.opening-wide-bottom": "Wide opening (bottom)",
+  "pattern.opening-wide-left": "Wide opening (left)",
 
   // Object settings dialog
   "object_dialog.heading": "Object settings",

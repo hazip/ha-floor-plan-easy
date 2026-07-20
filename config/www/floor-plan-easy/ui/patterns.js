@@ -46,86 +46,84 @@ const EDGE = {
 };
 const wall = (...sides) => svg(sides.map((s) => EDGE[s]).join(""));
 
-// ── Door openings (WALL layer) ───────────────────────────────────────────────
-// Just the wall break: two stubs with a gap between them. The gap is identical
-// for a left- or right-hinged door, so there is a single opening per edge — the
-// swing direction is carried by the matching door leaf in the OBJECT layer.
-const DOOR = {
-    top: svg(
-        `<rect x="0" y="0" width="30" height="${WT}" fill="currentColor"/>` +
-        `<rect x="70" y="0" width="30" height="${WT}" fill="currentColor"/>`
-    ),
-    bottom: svg(
-        `<rect x="0" y="${100 - WT}" width="30" height="${WT}" fill="currentColor"/>` +
-        `<rect x="70" y="${100 - WT}" width="30" height="${WT}" fill="currentColor"/>`
-    ),
-    left: svg(
-        `<rect x="0" y="0" width="${WT}" height="30" fill="currentColor"/>` +
-        `<rect x="0" y="70" width="${WT}" height="30" fill="currentColor"/>`
-    ),
-    right: svg(
-        `<rect x="${100 - WT}" y="0" width="${WT}" height="30" fill="currentColor"/>` +
-        `<rect x="${100 - WT}" y="70" width="${WT}" height="30" fill="currentColor"/>`
-    ),
+// ── Wall openings (WALL layer) ───────────────────────────────────────────────
+// A wall break on one edge: two stubs leaving a central gap. Two widths — narrow
+// (stub 30, gap 30..70) can pair with a door leaf; wide (stub 15, gap 15..85)
+// suits a window pane. Each opening also ships two variants that additionally
+// draw ONE of the two walls perpendicular to the opening's edge, so an opening
+// can sit in a tile where two walls meet (a corner carrying a door/window).
+const OPENING_STUB = { narrow: 30, wide: 15 };   // stub length per width
+
+// Clear gap between the two stubs, derived from the stub length: [stub, 100-stub]
+// (narrow -> 30..70, wide -> 15..85). Single source of truth for the opening
+// widths — door leaves and window panes size themselves from this so a change to
+// OPENING_STUB flows through everywhere.
+const OPENING_GAPS = Object.fromEntries(
+    Object.entries(OPENING_STUB).map(([width, stub]) => [width, [stub, 100 - stub]])
+);
+
+// The two wall stubs of an opening on `edge`, each `stub` long (fill only).
+const openingStubs = (edge, stub) => {
+    switch (edge) {
+        case "top":    return `<rect x="0" y="0" width="${stub}" height="${WT}" fill="currentColor"/><rect x="${100 - stub}" y="0" width="${stub}" height="${WT}" fill="currentColor"/>`;
+        case "bottom": return `<rect x="0" y="${100 - WT}" width="${stub}" height="${WT}" fill="currentColor"/><rect x="${100 - stub}" y="${100 - WT}" width="${stub}" height="${WT}" fill="currentColor"/>`;
+        case "left":   return `<rect x="0" y="0" width="${WT}" height="${stub}" fill="currentColor"/><rect x="0" y="${100 - stub}" width="${WT}" height="${stub}" fill="currentColor"/>`;
+        case "right":  return `<rect x="${100 - WT}" y="0" width="${WT}" height="${stub}" fill="currentColor"/><rect x="${100 - WT}" y="${100 - stub}" width="${WT}" height="${stub}" fill="currentColor"/>`;
+    }
 };
+
+// The two edges perpendicular to an opening's edge (the walls at its two ends).
+const PERP_EDGES = {
+    top: ["left", "right"],
+    bottom: ["left", "right"],
+    left: ["top", "bottom"],
+    right: ["top", "bottom"],
+};
+
+const WALL_OPENINGS = {};
+for (const edge of ["top", "right", "bottom", "left"]) {
+    for (const [width, stub] of Object.entries(OPENING_STUB)) {
+        const stubs = openingStubs(edge, stub);
+        WALL_OPENINGS[`opening-${width}-${edge}`] = svg(stubs);
+        for (const perp of PERP_EDGES[edge]) {
+            // Same opening plus one perpendicular wall drawn in full.
+            WALL_OPENINGS[`opening-${width}-${edge}-wall-${perp}`] = svg(stubs + EDGE[perp]);
+        }
+    }
+}
 
 // ── Door leaves (OBJECT layer) ───────────────────────────────────────────────
 // The swinging panel + its arc, bulging INTO the tile (the room). NO wall stub —
 // the opening is drawn separately in the WALL layer. Each edge has two variants:
 // the default (hinge on the first jamb) and `*Alt` (hinge on the opposite jamb —
-// the door opens the other way). Geometry matches the DOOR openings above so a
+// the door opens the other way). Geometry matches the wall openings above so a
 // leaf lines up inside its opening's gap.
 //
 // The hinge sits `inset` units from the near edge — `WT` so the leaf starts at
 // the inner face of the wall, or `0` for the edge-aligned variant flush with the
-// tile boundary. The panel is `LEAF_LEN` long (== the swing radius). The panel
-// line is drawn thicker than the arc so the door itself reads clearly; the arc
-// keeps its thin sweep.
-const LEAF_LEN = 40;   // door panel length == swing arc radius
+// tile boundary. `a`/`b` are the two jamb coordinates the leaf spans; the panel
+// (and swing radius) is `b - a` long, so the same drawing serves both opening
+// sizes — narrow (30..70) and the longer wide fit (15..85). The panel line is
+// drawn thicker than the arc so the door itself reads clearly; the arc keeps its
+// thin sweep.
 const LEAF_W = 5;      // panel stroke (the door itself — bold)
 const ARC_W = 1.2;     // swing-arc stroke (thin sweep)
 
-// Panel line + swing arc for one orientation at a given hinge inset.
+// Panel line + swing arc for one orientation, given the hinge inset `i` and the
+// jamb coordinates `a`/`b` (the leaf spans a..b; the swing radius is L = b - a).
 const DOOR_LEAF_BODY = {
-    top:       (i) => `<line x1="30" y1="${i}" x2="30" y2="${i + LEAF_LEN}" stroke-width="${LEAF_W}"/><path d="M30,${i + LEAF_LEN} A40,40 0 0 0 70,${i}" stroke-width="${ARC_W}"/>`,
-    topAlt:    (i) => `<line x1="70" y1="${i}" x2="70" y2="${i + LEAF_LEN}" stroke-width="${LEAF_W}"/><path d="M70,${i + LEAF_LEN} A40,40 0 0 1 30,${i}" stroke-width="${ARC_W}"/>`,
-    bottom:    (i) => `<line x1="30" y1="${100 - i}" x2="30" y2="${100 - i - LEAF_LEN}" stroke-width="${LEAF_W}"/><path d="M30,${100 - i - LEAF_LEN} A40,40 0 0 1 70,${100 - i}" stroke-width="${ARC_W}"/>`,
-    bottomAlt: (i) => `<line x1="70" y1="${100 - i}" x2="70" y2="${100 - i - LEAF_LEN}" stroke-width="${LEAF_W}"/><path d="M70,${100 - i - LEAF_LEN} A40,40 0 0 0 30,${100 - i}" stroke-width="${ARC_W}"/>`,
-    left:      (i) => `<line x1="${i}" y1="30" x2="${i + LEAF_LEN}" y2="30" stroke-width="${LEAF_W}"/><path d="M${i + LEAF_LEN},30 A40,40 0 0 1 ${i},70" stroke-width="${ARC_W}"/>`,
-    leftAlt:   (i) => `<line x1="${i}" y1="70" x2="${i + LEAF_LEN}" y2="70" stroke-width="${LEAF_W}"/><path d="M${i + LEAF_LEN},70 A40,40 0 0 0 ${i},30" stroke-width="${ARC_W}"/>`,
-    right:     (i) => `<line x1="${100 - i}" y1="30" x2="${100 - i - LEAF_LEN}" y2="30" stroke-width="${LEAF_W}"/><path d="M${100 - i - LEAF_LEN},30 A40,40 0 0 0 ${100 - i},70" stroke-width="${ARC_W}"/>`,
-    rightAlt:  (i) => `<line x1="${100 - i}" y1="70" x2="${100 - i - LEAF_LEN}" y2="70" stroke-width="${LEAF_W}"/><path d="M${100 - i - LEAF_LEN},70 A40,40 0 0 1 ${100 - i},30" stroke-width="${ARC_W}"/>`,
+    top:       (i, a, b) => { const L = b - a; return `<line x1="${a}" y1="${i}" x2="${a}" y2="${i + L}" stroke-width="${LEAF_W}"/><path d="M${a},${i + L} A${L},${L} 0 0 0 ${b},${i}" stroke-width="${ARC_W}"/>`; },
+    topAlt:    (i, a, b) => { const L = b - a; return `<line x1="${b}" y1="${i}" x2="${b}" y2="${i + L}" stroke-width="${LEAF_W}"/><path d="M${b},${i + L} A${L},${L} 0 0 1 ${a},${i}" stroke-width="${ARC_W}"/>`; },
+    bottom:    (i, a, b) => { const L = b - a; return `<line x1="${a}" y1="${100 - i}" x2="${a}" y2="${100 - i - L}" stroke-width="${LEAF_W}"/><path d="M${a},${100 - i - L} A${L},${L} 0 0 1 ${b},${100 - i}" stroke-width="${ARC_W}"/>`; },
+    bottomAlt: (i, a, b) => { const L = b - a; return `<line x1="${b}" y1="${100 - i}" x2="${b}" y2="${100 - i - L}" stroke-width="${LEAF_W}"/><path d="M${b},${100 - i - L} A${L},${L} 0 0 0 ${a},${100 - i}" stroke-width="${ARC_W}"/>`; },
+    left:      (i, a, b) => { const L = b - a; return `<line x1="${i}" y1="${a}" x2="${i + L}" y2="${a}" stroke-width="${LEAF_W}"/><path d="M${i + L},${a} A${L},${L} 0 0 1 ${i},${b}" stroke-width="${ARC_W}"/>`; },
+    leftAlt:   (i, a, b) => { const L = b - a; return `<line x1="${i}" y1="${b}" x2="${i + L}" y2="${b}" stroke-width="${LEAF_W}"/><path d="M${i + L},${b} A${L},${L} 0 0 0 ${i},${a}" stroke-width="${ARC_W}"/>`; },
+    right:     (i, a, b) => { const L = b - a; return `<line x1="${100 - i}" y1="${a}" x2="${100 - i - L}" y2="${a}" stroke-width="${LEAF_W}"/><path d="M${100 - i - L},${a} A${L},${L} 0 0 0 ${100 - i},${b}" stroke-width="${ARC_W}"/>`; },
+    rightAlt:  (i, a, b) => { const L = b - a; return `<line x1="${100 - i}" y1="${b}" x2="${100 - i - L}" y2="${b}" stroke-width="${LEAF_W}"/><path d="M${100 - i - L},${b} A${L},${L} 0 0 1 ${100 - i},${a}" stroke-width="${ARC_W}"/>`; },
 };
 
-const doorLeaf = (orient, inset) =>
-    svg(`<g fill="none" stroke="currentColor">${DOOR_LEAF_BODY[orient](inset)}</g>`);
-const WIN = {
-    top: svg(
-        `<rect x="0" y="0" width="15" height="${WT}" fill="currentColor"/>` +
-        `<rect x="85" y="0" width="15" height="${WT}" fill="currentColor"/>` +
-        `<g fill="none" stroke="currentColor" stroke-width="2">` +
-        `<rect x="15" y="3" width="70" height="6"/><line x1="15" y1="6" x2="85" y2="6"/></g>`
-    ),
-    bottom: svg(
-        `<rect x="0" y="${100 - WT}" width="15" height="${WT}" fill="currentColor"/>` +
-        `<rect x="85" y="${100 - WT}" width="15" height="${WT}" fill="currentColor"/>` +
-        `<g fill="none" stroke="currentColor" stroke-width="2">` +
-        `<rect x="15" y="91" width="70" height="6"/><line x1="15" y1="94" x2="85" y2="94"/></g>`
-    ),
-    left: svg(
-        `<rect x="0" y="0" width="${WT}" height="15" fill="currentColor"/>` +
-        `<rect x="0" y="85" width="${WT}" height="15" fill="currentColor"/>` +
-        `<g fill="none" stroke="currentColor" stroke-width="2">` +
-        `<rect x="3" y="15" width="6" height="70"/><line x1="6" y1="15" x2="6" y2="85"/></g>`
-    ),
-    right: svg(
-        `<rect x="${100 - WT}" y="0" width="${WT}" height="15" fill="currentColor"/>` +
-        `<rect x="${100 - WT}" y="85" width="${WT}" height="15" fill="currentColor"/>` +
-        `<g fill="none" stroke="currentColor" stroke-width="2">` +
-        `<rect x="91" y="15" width="6" height="70"/><line x1="94" y1="15" x2="94" y2="85"/></g>`
-    ),
-};
-
+const doorLeaf = (orient, inset, a, b) =>
+    svg(`<g fill="none" stroke="currentColor">${DOOR_LEAF_BODY[orient](inset, a, b)}</g>`);
 // ── Furniture / decor (drawn in the OBJECT overlay layer) ────────────────────
 // Single-tile line-art silhouettes, centered with a margin. `stroke`/`fill`
 // use currentColor so they recolor with the object color picker.
@@ -220,17 +218,6 @@ const FURNITURE = {
         `<line x1="45" y1="46" x2="45" y2="56"/>` +
         `<line x1="55" y1="46" x2="55" y2="56"/></g></g>`
     ),
-    "stairs": svg(
-        `<g fill="none" stroke="currentColor" stroke-width="3">` +
-        `<rect x="28" y="14" width="44" height="72"/>` +
-        `<g stroke-width="2">` +
-        `<line x1="28" y1="23" x2="72" y2="23"/><line x1="28" y1="32" x2="72" y2="32"/>` +
-        `<line x1="28" y1="41" x2="72" y2="41"/><line x1="28" y1="50" x2="72" y2="50"/>` +
-        `<line x1="28" y1="59" x2="72" y2="59"/><line x1="28" y1="68" x2="72" y2="68"/>` +
-        `<line x1="28" y1="77" x2="72" y2="77"/></g>` +
-        `<polyline points="44,32 50,24 56,32" stroke-width="2.5"/>` +
-        `<line x1="50" y1="24" x2="50" y2="78" stroke-width="2.5"/></g>`
-    ),
     "rug": svg(
         `<g fill="none" stroke="currentColor">` +
         `<rect x="18" y="26" width="64" height="48" rx="6" stroke-width="3"/>` +
@@ -242,6 +229,22 @@ const FURNITURE = {
         `<circle cx="50" cy="40" r="12" stroke-width="2.5"/>` +
         `<circle cx="38" cy="48" r="9" stroke-width="2.5"/>` +
         `<circle cx="62" cy="48" r="9" stroke-width="2.5"/></g>`
+    ),
+};
+
+// ── Stairs (OBJECT layer) ────────────────────────────────────────────────────
+// Its own group in the object picker (only one for now, more may follow).
+const STAIRS = {
+    "stairs": svg(
+        `<g fill="none" stroke="currentColor" stroke-width="3">` +
+        `<rect x="28" y="14" width="44" height="72"/>` +
+        `<g stroke-width="2">` +
+        `<line x1="28" y1="23" x2="72" y2="23"/><line x1="28" y1="32" x2="72" y2="32"/>` +
+        `<line x1="28" y1="41" x2="72" y2="41"/><line x1="28" y1="50" x2="72" y2="50"/>` +
+        `<line x1="28" y1="59" x2="72" y2="59"/><line x1="28" y1="68" x2="72" y2="68"/>` +
+        `<line x1="28" y1="77" x2="72" y2="77"/></g>` +
+        `<polyline points="44,32 50,24 56,32" stroke-width="2.5"/>` +
+        `<line x1="50" y1="24" x2="50" y2="78" stroke-width="2.5"/></g>`
     ),
 };
 
@@ -271,26 +274,18 @@ const BUILT_IN_WALL_PATTERNS = {
     // All four edges — a closed room / cross.
     "wall-box": wall("top", "right", "bottom", "left"),
 
-    // Door openings — the wall break only (the leaf lives in OBJECT_PATTERNS).
-    "door-top": DOOR.top,
-    "door-right": DOOR.right,
-    "door-bottom": DOOR.bottom,
-    "door-left": DOOR.left,
-
-    // Windows.
-    "window-top": WIN.top,
-    "window-right": WIN.right,
-    "window-bottom": WIN.bottom,
-    "window-left": WIN.left,
+    // Openings — narrow / wide, each plain and with one perpendicular wall.
+    ...WALL_OPENINGS,
 };
 
 // Object overlay patterns — a second layer above the wall. Door leaves (the
 // swing) plus furniture / decor. Kept separate from walls so an object can sit
 // on top of a wall in the same tile and take its own color.
 // Door leaves — default plus `-alt` (hinge on the opposite jamb). Pair each with
-// the matching WALL `door-<edge>` opening. Every leaf ships in two forms: the
-// default sits at the inner wall face (`WT`), and `-edge` is flush with the tile
-// boundary (inset `0`) for doors placed without a wall behind them.
+// the matching WALL `opening-narrow-<edge>` (or the `-long` leaf with an
+// `opening-wide-<edge>`). Every leaf ships in two forms: the default sits at the
+// inner wall face (`WT`), and `-edge` is flush with the tile boundary (inset `0`)
+// for doors placed without a wall behind them.
 const DOOR_LEAF_KEYS = [
     ["door-leaf-top", "top"],
     ["door-leaf-top-alt", "topAlt"],
@@ -301,17 +296,56 @@ const DOOR_LEAF_KEYS = [
     ["door-leaf-left", "left"],
     ["door-leaf-left-alt", "leftAlt"],
 ];
+// Leaf sizes span the opening gaps (see OPENING_GAPS): the default fits the
+// narrow opening, `-long` the wide one. Every orientation ships in both sizes,
+// each in the inner (inset WT) and `-edge` (inset 0, flush) forms.
+const LEAF_SIZES = {
+    "": OPENING_GAPS.narrow,       // narrow opening
+    "-long": OPENING_GAPS.wide,    // wide opening
+};
 const DOOR_LEAVES = {};
 for (const [key, orient] of DOOR_LEAF_KEYS) {
-    DOOR_LEAVES[key] = doorLeaf(orient, WT);            // inside the wall
-    DOOR_LEAVES[`${key}-edge`] = doorLeaf(orient, 0);   // flush with the tile edge
+    for (const [sizeSuffix, [a, b]] of Object.entries(LEAF_SIZES)) {
+        DOOR_LEAVES[`${key}${sizeSuffix}`] = doorLeaf(orient, WT, a, b);        // inside the wall
+        DOOR_LEAVES[`${key}${sizeSuffix}-edge`] = doorLeaf(orient, 0, a, b);    // flush with the tile edge
+    }
+}
+
+// ── Window panes (OBJECT layer) ──────────────────────────────────────────────
+// The glass + frame that fills a wall opening's clear gap, drawn above the wall
+// so it can be dropped onto an opening in the same tile. Each pane spans the gap
+// [a,b] of one opening type — NARROW (30..70) or WIDE (15..85) — and sits inside
+// the wall band (thickness WT) on the given edge. Same glass drawing the old
+// built-in windows used (a thin frame with a center glazing bar).
+const WINDOW_PANE_BODY = {
+    top:    (a, b) => `<rect x="${a}" y="3" width="${b - a}" height="6"/><line x1="${a}" y1="6" x2="${b}" y2="6"/>`,
+    bottom: (a, b) => `<rect x="${a}" y="91" width="${b - a}" height="6"/><line x1="${a}" y1="94" x2="${b}" y2="94"/>`,
+    left:   (a, b) => `<rect x="3" y="${a}" width="6" height="${b - a}"/><line x1="6" y1="${a}" x2="6" y2="${b}"/>`,
+    right:  (a, b) => `<rect x="91" y="${a}" width="6" height="${b - a}"/><line x1="94" y1="${a}" x2="94" y2="${b}"/>`,
+};
+const windowPane = (edge, a, b) =>
+    svg(`<g fill="none" stroke="currentColor" stroke-width="2">${WINDOW_PANE_BODY[edge](a, b)}</g>`);
+
+// Each pane spans an opening's clear gap (see OPENING_GAPS), so panes stay
+// aligned with the wall openings automatically.
+const WINDOW_PANES = {};
+for (const edge of ["top", "right", "bottom", "left"]) {
+    for (const [width, [a, b]] of Object.entries(OPENING_GAPS)) {
+        WINDOW_PANES[`window-${width}-${edge}`] = windowPane(edge, a, b);
+    }
 }
 
 const BUILT_IN_OBJECT_PATTERNS = {
     ...DOOR_LEAVES,
 
+    // Window panes.
+    ...WINDOW_PANES,
+
     // Furniture / decor.
     ...FURNITURE,
+
+    // Stairs.
+    ...STAIRS,
 };
 
 const BUILT_IN_BACKGROUND_PATTERNS = {
@@ -480,6 +514,43 @@ const BUILT_IN_BACKGROUND_PATTERNS = {
 export const BACKGROUND_PATTERNS = { ...BUILT_IN_BACKGROUND_PATTERNS };
 export const WALL_PATTERNS = { ...BUILT_IN_WALL_PATTERNS };
 export const OBJECT_PATTERNS = { ...BUILT_IN_OBJECT_PATTERNS };
+
+// Picker groups. Each registry has an ordered list of groups; the settings
+// dialog renders one labeled section per group, in this order, containing the
+// listed keys (in listed order). `labelKey` is an i18n key (see ui/i18n).
+// Any registry key not named by a group — e.g. a user-added pattern — is shown
+// in a trailing "Other" section, so grouping is additive and never hides a key.
+export const BACKGROUND_PATTERN_GROUPS = [
+    { id: "indoor", labelKey: "group.bg.indoor", keys: [
+        "diagonals", "hatch", "planks-h", "planks-v", "parquet",
+        "tiles-large", "tiles-small", "checkerboard", "carpet",
+    ] },
+    { id: "outdoor", labelKey: "group.bg.outdoor", keys: [
+        "bricks", "pebbles", "water", "grass",
+    ] },
+];
+
+export const WALL_PATTERN_GROUPS = [
+    { id: "wall", labelKey: "group.wall.wall", keys: [
+        "wall-top", "wall-right", "wall-bottom", "wall-left",
+        "wall-corner-tl", "wall-corner-tr", "wall-corner-br", "wall-corner-bl",
+        "wall-corridor-h", "wall-corridor-v",
+        "wall-t-open-bottom", "wall-t-open-top", "wall-t-open-right", "wall-t-open-left",
+        "wall-box",
+    ] },
+    { id: "opening", labelKey: "group.wall.opening", keys: Object.keys(WALL_OPENINGS) },
+];
+
+export const OBJECT_PATTERN_GROUPS = [
+    // Door leaves split by placement: the default variants sit at the inner wall
+    // face ("inside the wall"); the `-edge` variants are flush with the tile
+    // boundary, for doors with no wall behind them ("outside the wall").
+    { id: "doors-inner", labelKey: "group.object.doors_inner", keys: Object.keys(DOOR_LEAVES).filter((k) => !k.endsWith("-edge")) },
+    { id: "doors-outer", labelKey: "group.object.doors_outer", keys: Object.keys(DOOR_LEAVES).filter((k) => k.endsWith("-edge")) },
+    { id: "windows", labelKey: "group.object.windows", keys: Object.keys(WINDOW_PANES) },
+    { id: "furniture", labelKey: "group.object.furniture", keys: Object.keys(FURNITURE) },
+    { id: "stairs", labelKey: "group.object.stairs", keys: Object.keys(STAIRS) },
+];
 
 // Optional user overrides live OUTSIDE this package folder so that replacing
 // the whole `floor-plan-easy/` directory on update never touches them. Home
